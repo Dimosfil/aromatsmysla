@@ -14,6 +14,16 @@ generated outputs, secrets, credentials, or private production data.
 
 ## Tasks
 
+### BotHost Docker Runtime Path
+
+Goal: make the Docker runtime start whether BotHost runs the flattened image
+layout or mounts the repository root at `/app`.
+
+Planned changes:
+
+- [x] Update Docker startup command to choose `/app/standalone` when present.
+- [x] Verify the standalone build/start path locally without printing secrets.
+
 ### Local Docker Env Startup
 
 Goal: start the guide bot container with the private local runtime env.
