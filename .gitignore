@@ -7,6 +7,7 @@ standalone/apps/*/dist/
 standalone/packages/*/dist/
 data/
 storage/
+temp/
 !standalone/apps/api/src/storage/
 !standalone/apps/api/src/storage/**
 !standalone/packages/core/src/storage/
