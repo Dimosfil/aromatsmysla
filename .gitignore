@@ -1,0 +1,18 @@
+.env
+.env.local
+*.log
+node_modules/
+standalone/node_modules/
+standalone/apps/*/dist/
+standalone/packages/*/dist/
+data/
+storage/
+npm-debug.log*
+
+# Local/generated AI-agent memory and runtime noise
+tools/project-memory/*.sqlite
+tools/project-memory/*.sqlite-*
+tools/project-memory/*.db
+tools/project-memory/*.db-*
+tools/summary/*.tmp
+tools/deploy/ftp.local.json
