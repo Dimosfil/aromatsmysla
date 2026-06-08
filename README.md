@@ -55,6 +55,11 @@ The hosting form's `Bot Token` should provide `TELEGRAM_BOT_TOKEN`. If the
 platform does not map that field to the container environment, add
 `TELEGRAM_BOT_TOKEN` manually as an environment variable.
 
+If BotHost tries to run `standalone/packages/core/src/ports.ts` and fails with
+`Unknown file extension ".ts"`, the form is not using the repository
+`Dockerfile`. Recreate or edit the bot with `Use custom Dockerfile` enabled and
+the `Main file` field empty.
+
 Keep bot text, channel URL, guide titles, button prefixes, media, and uploaded
 PDFs in `standalone/bot/content.seed.json` for first deploy and then in the
 admin panel. Admin edits are saved to `GUIDE_BOT_CONTENT_PATH`; these values

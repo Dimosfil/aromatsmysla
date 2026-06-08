@@ -7,6 +7,10 @@ standalone/apps/*/dist/
 standalone/packages/*/dist/
 data/
 storage/
+!standalone/apps/api/src/storage/
+!standalone/apps/api/src/storage/**
+!standalone/packages/core/src/storage/
+!standalone/packages/core/src/storage/**
 npm-debug.log*
 
 # Local/generated AI-agent memory and runtime noise
