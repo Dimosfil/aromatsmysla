@@ -23,7 +23,7 @@ shared instruction kit.
 Prefer the shared intake folder when available:
 
 ```text
-D:\AI\general-instructions\updates\
+<shared-instruction-library>\updates\
 ```
 
 If the shared library is unavailable, use a local intake folder:
