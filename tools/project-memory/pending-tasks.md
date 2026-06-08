@@ -14,6 +14,17 @@ generated outputs, secrets, credentials, or private production data.
 
 ## Tasks
 
+### BotHost Workspace Link Build
+
+Goal: make BotHost runtime builds restore npm workspace links before TypeScript
+compilation.
+
+Planned changes:
+
+- [x] Reproduce or isolate why `core` cannot resolve the `shared` workspace.
+- [x] Update the Docker startup build path to refresh workspace links reliably.
+- [x] Verify the standalone build after the change.
+
 ### BotHost Docker Runtime Path
 
 Goal: make the Docker runtime start whether BotHost runs the flattened image
