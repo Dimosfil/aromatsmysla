@@ -32,4 +32,4 @@ RUN mkdir -p /app/data/uploads
 
 EXPOSE 3000
 
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["node", "node_modules/tsx/dist/cli.mjs", "apps/api/dist/main.js"]
