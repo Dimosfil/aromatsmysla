@@ -1,0 +1,9 @@
+services:
+  guide-bot:
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data

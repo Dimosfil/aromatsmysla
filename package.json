@@ -1,0 +1,24 @@
+{
+  "name": "telegram-bot-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run build -w @telegram-bot-template/shared && npm run dev -w @telegram-bot-template/web",
+    "dev:api": "npm run build -w @telegram-bot-template/shared && npm run build -w @telegram-bot-template/core && npm run dev -w @telegram-bot-template/api",
+    "build": "npm run build -w @telegram-bot-template/shared && npm run build -w @telegram-bot-template/core && npm run build -w @telegram-bot-template/api && npm run build -w @telegram-bot-template/web",
+    "typecheck": "npm run typecheck -w @telegram-bot-template/shared && npm run typecheck -w @telegram-bot-template/core && npm run typecheck -w @telegram-bot-template/api && npm run typecheck -w @telegram-bot-template/web",
+    "smoke:api": "npm run build -w @telegram-bot-template/shared && npm run build -w @telegram-bot-template/core && npm run smoke -w @telegram-bot-template/api",
+    "test:api": "npm run build -w @telegram-bot-template/shared && npm run build -w @telegram-bot-template/core && npm run test -w @telegram-bot-template/api",
+    "test": "npm run test:api",
+    "check": "npm run typecheck && npm run test:api && npm run smoke:api",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
