@@ -61,9 +61,11 @@ If BotHost tries to run `standalone/packages/core/src/ports.ts` and fails with
 the `Main file` field empty.
 
 Keep bot text, channel URL, guide titles, button prefixes, media, and uploaded
-PDFs in `standalone/bot/content.seed.json` for first deploy and then in the
-admin panel. Admin edits are saved to `GUIDE_BOT_CONTENT_PATH`; these values
-should not be managed as deployment env variables.
+PDFs in `standalone/bot/content.seed.json` for Docker deploys or
+`content.seed.json` when BotHost runs the flattened repository workspace. The
+API checks both first-run seed locations. Admin edits are saved to
+`GUIDE_BOT_CONTENT_PATH`; these values should not be managed as deployment env
+variables.
 
 For many bots, keep each profile in `bots/<bot-id>/` and give each running bot a
 different `API_PORT` and `SQLITE_SESSION_PATH` when running them at the same

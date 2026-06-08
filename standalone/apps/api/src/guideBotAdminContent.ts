@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, extname, resolve } from "node:path";
+import { basename, dirname, extname, resolve } from "node:path";
 import type { GuideBotAdminContent, GuideBotAdminGuide } from "@telegram-bot-template/shared";
 import type { GuideBotRuntimeConfig } from "./config";
 
@@ -14,23 +14,25 @@ export class GuideBotAdminContentStore {
 
   read(baseConfig: GuideBotRuntimeConfig | null): GuideBotAdminContent {
     const baseContent = createContentFromRuntimeConfig(baseConfig);
-    const savedContent = this.readContentFile(this.contentPath) ?? this.readSeedContent();
-    if (!savedContent) {
+    const seedContent = this.readSeedContent();
+    const savedContent = this.readContentFile(this.contentPath);
+    const sourceContent = savedContent && !isPlaceholderContent(savedContent, baseContent) ? savedContent : seedContent ?? savedContent;
+    if (!sourceContent) {
       return baseContent;
     }
 
     return normalizeAdminContent({
-      requiredChannelUrl: savedContent.requiredChannelUrl ?? baseContent.requiredChannelUrl,
-      selectionPhotoPath: savedContent.selectionPhotoPath ?? baseContent.selectionPhotoPath,
+      requiredChannelUrl: sourceContent.requiredChannelUrl ?? baseContent.requiredChannelUrl,
+      selectionPhotoPath: sourceContent.selectionPhotoPath ?? baseContent.selectionPhotoPath,
       messages: {
         ...baseContent.messages,
-        ...savedContent.messages
+        ...sourceContent.messages
       },
       media: {
         ...baseContent.media,
-        ...savedContent.media
+        ...sourceContent.media
       },
-      guides: savedContent.guides?.length ? savedContent.guides : baseContent.guides
+      guides: sourceContent.guides?.length ? sourceContent.guides : baseContent.guides
     });
   }
 
@@ -50,7 +52,14 @@ export class GuideBotAdminContentStore {
   }
 
   private readSeedContent(): Partial<GuideBotAdminContent> | null {
-    return this.seedPath ? this.readContentFile(this.seedPath) : null;
+    for (const path of this.getSeedPathCandidates()) {
+      const content = this.readContentFile(path);
+      if (content) {
+        return content;
+      }
+    }
+
+    return null;
   }
 
   private readContentFile(path: string): Partial<GuideBotAdminContent> | null {
@@ -60,6 +69,19 @@ export class GuideBotAdminContentStore {
 
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<GuideBotAdminContent>;
     return parsed && typeof parsed === "object" ? parsed : null;
+  }
+
+  private getSeedPathCandidates(): string[] {
+    const candidates = [
+      this.seedPath,
+      "content.seed.json",
+      "bot/content.seed.json",
+      "../content.seed.json",
+      "../bot/content.seed.json",
+      this.seedPath ? resolve(dirname(dirname(this.seedPath)), "content.seed.json") : null
+    ].filter((path): path is string => Boolean(path));
+
+    return [...new Set(candidates.map((path) => resolve(path)))];
   }
 }
 
@@ -137,6 +159,30 @@ function normalizeGuide(guide: GuideBotAdminGuide): GuideBotAdminGuide {
     buttonPrefix: normalizeOptionalString(guide.buttonPrefix),
     filePath: guide.filePath.trim()
   };
+}
+
+function isPlaceholderContent(content: Partial<GuideBotAdminContent>, baseContent: GuideBotAdminContent): boolean {
+  const normalized = normalizeAdminContent({
+    ...baseContent,
+    ...content,
+    messages: {
+      ...baseContent.messages,
+      ...content.messages
+    },
+    media: {
+      ...baseContent.media,
+      ...content.media
+    },
+    guides: content.guides ?? []
+  });
+
+  return (
+    normalized.guides.length === 0 &&
+    Object.values(normalized.media).every((value) => !value) &&
+    normalized.messages.welcomePrompt === baseContent.messages.welcomePrompt &&
+    normalized.messages.subscribedPrompt === baseContent.messages.subscribedPrompt &&
+    normalized.messages.subscribePrompt === baseContent.messages.subscribePrompt
+  );
 }
 
 function normalizeOptionalString(value: string | undefined): string | undefined {

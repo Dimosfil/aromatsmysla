@@ -34,8 +34,9 @@ Dockerfile option, choose `Node.js`, enable a domain for the admin panel, and
 upload variables from `env.bothost.example`. Leave the main file empty when the
 custom Dockerfile option is enabled. Keep bot copy, channel button URL, guide
 titles, button prefixes, media, and PDF paths out of env; first deploy reads
-them from `standalone/bot/content.seed.json`, and later admin edits are stored
-at `GUIDE_BOT_CONTENT_PATH`.
+them from `standalone/bot/content.seed.json` in Docker layout or
+`content.seed.json` in a flattened BotHost workspace layout, and later admin
+edits are stored at `GUIDE_BOT_CONTENT_PATH`.
 
 ## BotHost Form Values
 

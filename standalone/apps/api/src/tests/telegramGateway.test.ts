@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { loadApiConfig } from "../config";
+import { GuideBotAdminContentStore } from "../guideBotAdminContent";
 import { buildServer } from "../server";
 
 const validToken = "123456789:abcdefghijklmnopqrstuvwxyz";
@@ -90,6 +94,66 @@ async function testBotHostTokenFallback() {
   });
 
   assert.equal(config.telegramBotToken, validToken);
+}
+
+async function testGuideBotContentSeedFallback() {
+  const rootDir = join(tmpdir(), `guide-content-seed-${process.pid}-${Date.now()}`);
+  const dataDir = join(rootDir, "data");
+  mkdirSync(dataDir, { recursive: true });
+
+  const contentPath = join(dataDir, "guide-bot-content.json");
+  const seedPath = join(rootDir, "content.seed.json");
+  const missingConfiguredSeedPath = join(rootDir, "bot", "content.seed.json");
+  const baseConfig = loadApiConfig({
+    env: {
+      GUIDE_BOT_REQUIRED_CHANNEL_ID: "@demo_channel"
+    },
+    loadEnvFile: false
+  }).guideBot;
+
+  writeFileSync(
+    contentPath,
+    `${JSON.stringify({
+      requiredChannelUrl: "https://t.me/demo_channel",
+      messages: {
+        welcomePrompt: "Great, subscription confirmed. Choose the guide you want:",
+        subscribePrompt: "Hi! Subscribe to the channel first, then send /start again.",
+        subscribedPrompt: "Great, subscription confirmed. Choose the guide you want:"
+      },
+      media: {},
+      guides: []
+    })}\n`,
+    "utf8"
+  );
+  writeFileSync(
+    seedPath,
+    `${JSON.stringify({
+      requiredChannelUrl: "https://t.me/aromatsmysla",
+      messages: {
+        welcomePrompt: "Seed welcome",
+        subscribedPrompt: "Seed subscribed"
+      },
+      guides: [
+        {
+          id: "seed-guide",
+          title: "Seed guide",
+          filePath: "guides/seed.pdf"
+        }
+      ]
+    })}\n`,
+    "utf8"
+  );
+
+  try {
+    const store = new GuideBotAdminContentStore(contentPath, join(rootDir, "uploads"), missingConfiguredSeedPath);
+    const content = store.read(baseConfig);
+
+    assert.equal(content.requiredChannelUrl, "https://t.me/aromatsmysla");
+    assert.equal(content.messages.welcomePrompt, "Seed welcome");
+    assert.equal(content.guides[0]?.id, "seed-guide");
+  } finally {
+    rmSync(rootDir, { recursive: true, force: true });
+  }
 }
 
 async function testInboundWorkflowWithoutTelegramApi() {
@@ -491,6 +555,7 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 
 await testTelegramConfigRoutes();
 await testBotHostTokenFallback();
+await testGuideBotContentSeedFallback();
 await testInboundWorkflowWithoutTelegramApi();
 await testMockAiWorkflow();
 await testExtensionRoutes();

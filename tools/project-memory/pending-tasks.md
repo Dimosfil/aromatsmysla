@@ -145,3 +145,15 @@ Risks or dependencies:
 Verification:
 
 - [ ] TODO
+
+### BotHost Content Seed Fallback
+
+Goal: make the admin content API load the aromatsmysla seed when BotHost uses
+either the Docker `/app/bot/content.seed.json` layout or a flattened
+`/app/content.seed.json` workspace layout.
+
+Planned changes:
+
+- [x] Add seed fallback path resolution in the admin content store.
+- [x] Cover the wrong-env-path plus fallback-seed scenario with a focused test.
+- [x] Verify API tests/build.
