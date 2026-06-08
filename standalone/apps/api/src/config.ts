@@ -18,6 +18,7 @@ export interface ApiConfig {
   guideBotContentPath: string;
   guideBotContentSeedPath: string | null;
   guideBotUploadDir: string;
+  guideBotUploadMaxBytes: number;
   adminWebDir: string | null;
 }
 
@@ -88,6 +89,7 @@ export function loadApiConfig(options: LoadApiConfigOptions = {}): ApiConfig {
     guideBotContentPath: readString(env.GUIDE_BOT_CONTENT_PATH, "data/guide-bot-content.json"),
     guideBotContentSeedPath: readOptionalString(env.GUIDE_BOT_CONTENT_SEED_PATH),
     guideBotUploadDir: readString(env.GUIDE_BOT_UPLOAD_DIR, "data/guide-bot-uploads"),
+    guideBotUploadMaxBytes: readPositiveInteger(env.GUIDE_BOT_UPLOAD_MAX_BYTES, 25 * 1024 * 1024),
     adminWebDir: readOptionalString(env.ADMIN_WEB_DIR)
   };
 
@@ -231,6 +233,14 @@ function readPort(value: string | undefined, fallback: number): number {
   return Number(value);
 }
 
+function readPositiveInteger(value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === "") {
+    return fallback;
+  }
+
+  return Number(value);
+}
+
 function validateConfig(config: ApiConfig): void {
   const issues: string[] = [];
 
@@ -268,6 +278,10 @@ function validateConfig(config: ApiConfig): void {
 
   if (!config.guideBotUploadDir) {
     issues.push("GUIDE_BOT_UPLOAD_DIR must not be empty.");
+  }
+
+  if (!Number.isInteger(config.guideBotUploadMaxBytes) || config.guideBotUploadMaxBytes < 1) {
+    issues.push("GUIDE_BOT_UPLOAD_MAX_BYTES must be a positive integer when set.");
   }
 
   if (!["disabled", "mock"].includes(config.aiProvider)) {

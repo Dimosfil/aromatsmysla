@@ -177,6 +177,7 @@ export function buildServer(options: BuildServerOptions = {}) {
 
   server.post<{ Headers: { "x-file-name"?: string }; Body: Buffer }>(
     "/admin/guide-bot/uploads",
+    { bodyLimit: config.guideBotUploadMaxBytes },
     async (request, reply): Promise<AdminUploadResponse | unknown> => {
       if (!isAdminRequestAuthorized(request.headers.authorization, adminSessions)) {
         return reply.code(401).send({ error: "Admin login required." });

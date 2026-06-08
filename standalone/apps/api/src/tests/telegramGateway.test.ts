@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadApiConfig } from "../config";
@@ -173,6 +173,52 @@ async function testTelegramFilePathFallback() {
     assert.equal(resolveTelegramFilePath("guides/customer-guide.pdf"), guidePath);
   } finally {
     process.chdir(originalCwd);
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+}
+
+async function testAdminGuideUploadAcceptsLargePdf() {
+  const rootDir = join(tmpdir(), `guide-large-upload-${process.pid}-${Date.now()}`);
+  mkdirSync(rootDir, { recursive: true });
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        ADMIN_USERNAME: "admin",
+        ADMIN_PASSWORD: "secret",
+        GUIDE_BOT_CONTENT_PATH: join(rootDir, "content.json"),
+        GUIDE_BOT_UPLOAD_DIR: join(rootDir, "uploads")
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: join(rootDir, "sessions.sqlite3")
+  });
+
+  try {
+    const login = await server.inject({
+      method: "POST",
+      url: "/admin/login",
+      payload: {
+        username: "admin",
+        password: "secret"
+      }
+    });
+    assert.equal(login.statusCode, 200);
+    const token = login.json<{ token: string }>().token;
+
+    const upload = await server.inject({
+      method: "POST",
+      url: "/admin/guide-bot/uploads",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/octet-stream",
+        "x-file-name": "customer-guide.pdf"
+      },
+      payload: Buffer.alloc(2 * 1024 * 1024, "%PDF")
+    });
+    assert.equal(upload.statusCode, 200);
+    assert.ok(existsSync(upload.json<{ filePath: string }>().filePath));
+  } finally {
+    await server.close();
     rmSync(rootDir, { recursive: true, force: true });
   }
 }
@@ -578,6 +624,7 @@ await testTelegramConfigRoutes();
 await testBotHostTokenFallback();
 await testGuideBotContentSeedFallback();
 await testTelegramFilePathFallback();
+await testAdminGuideUploadAcceptsLargePdf();
 await testInboundWorkflowWithoutTelegramApi();
 await testMockAiWorkflow();
 await testExtensionRoutes();

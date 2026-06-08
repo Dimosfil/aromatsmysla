@@ -169,3 +169,13 @@ Planned changes:
   layouts.
 - [x] Add focused tests for path fallback resolution.
 - [x] Verify API tests/build.
+
+### Admin PDF Upload Limit
+
+Goal: allow admin-managed guide PDF uploads through the BotHost admin panel.
+
+Planned changes:
+
+- [x] Add a configurable upload body limit for guide bot uploads.
+- [x] Cover large PDF uploads with a focused API test.
+- [x] Verify API tests/build.
