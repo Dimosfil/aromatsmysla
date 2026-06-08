@@ -1,0 +1,13 @@
+.git
+.env
+.env.local
+*.log
+node_modules
+standalone/node_modules
+standalone/apps/*/node_modules
+standalone/packages/*/node_modules
+standalone/apps/*/dist
+standalone/packages/*/dist
+data
+storage
+npm-debug.log*

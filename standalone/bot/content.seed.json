@@ -1,0 +1,28 @@
+{
+  "requiredChannelUrl": "https://t.me/aromatsmysla",
+  "messages": {
+    "welcomePrompt": "Привет! 🌿\n\nЯ — бот-помощник канала «АРОМАТ СМЫСЛА».\n\nЗдесь можно получить бесплатные материалы про эфирные масла, ароматные ритуалы и женское состояние.\n\nПосле выполнения у вас появится:\n✔️ понятный ритуал заботы о себе\n✔️ идеи для ароматной ванны и расслабления\n✔️ подборка масел для разных состояний\n\nДля получения подарка проверьте подписку на канал 👇",
+    "subscribePrompt": "Чтобы получить материалы, подпишитесь на канал и нажмите «Подписка есть!» еще раз.",
+    "subscribedPrompt": "Супер! 🤍\n\nВижу вашу подписку.\n\nЗабирайте и применяйте уже сегодня ⬇️",
+    "deliveredPrefix": "Ваш подарок:",
+    "unavailableGuide": "Этот материал сейчас недоступен. Нажмите /start и выберите другой гайд.",
+    "subscriptionCheckError": "Пока не получается проверить подписку. Попробуйте еще раз через минуту.",
+    "checkSubscriptionButton": "🌿 Я подписана, забрать подарки",
+    "channelButtonText": "Канал «АРОМАТ СМЫСЛА»"
+  },
+  "media": {},
+  "guides": [
+    {
+      "id": "aroma_vanna",
+      "title": "АромаВанна гайд",
+      "buttonPrefix": "🛁",
+      "filePath": "/app/bot/guides/aroma-vanna-guide.pdf"
+    },
+    {
+      "id": "essential_oils_women_state",
+      "title": "7 эфирных масел женского состояния",
+      "buttonPrefix": "🌿",
+      "filePath": "/app/bot/guides/7-essential-oils-women-state.pdf"
+    }
+  ]
+}
