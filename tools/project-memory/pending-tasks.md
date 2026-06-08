@@ -146,6 +146,17 @@ Verification:
 
 - [ ] TODO
 
+### BotHost Admin Web Startup Guard
+
+Goal: prevent BotHost from serving API-only 404 at `/` when the API build
+exists but the web admin `dist` output is missing.
+
+Planned changes:
+
+- [x] Default `ADMIN_WEB_DIR` to the Docker web dist path.
+- [x] Rebuild on container startup when API or web build output is missing.
+- [x] Verify build and local container root response.
+
 ### BotHost Content Seed Fallback
 
 Goal: make the admin content API load the aromatsmysla seed when BotHost uses

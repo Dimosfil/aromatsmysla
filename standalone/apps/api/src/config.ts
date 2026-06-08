@@ -92,7 +92,7 @@ export function loadApiConfig(options: LoadApiConfigOptions = {}): ApiConfig {
     guideBotContentSeedPath: readOptionalString(env.GUIDE_BOT_CONTENT_SEED_PATH),
     guideBotUploadDir: readString(env.GUIDE_BOT_UPLOAD_DIR, "data/guide-bot-uploads"),
     guideBotUploadMaxBytes: readPositiveInteger(env.GUIDE_BOT_UPLOAD_MAX_BYTES, 25 * 1024 * 1024),
-    adminWebDir: readOptionalString(env.ADMIN_WEB_DIR)
+    adminWebDir: readString(env.ADMIN_WEB_DIR, "/app/apps/web/dist")
   };
 
   validateConfig(config);
