@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 import { extname, relative, resolve, sep } from "node:path";
 import Fastify from "fastify";
@@ -278,10 +279,12 @@ function isAdminRequestAuthorized(authorization: string | undefined, sessions: S
 
 function registerAdminWebRoutes(server: FastifyInstance, adminWebDir: string | null): void {
   if (!adminWebDir) {
+    server.log.debug("Admin web dir is not configured; admin panel routes are disabled.");
     return;
   }
 
-  const rootDir = resolve(adminWebDir);
+  const rootDir = resolveAdminWebRoot(adminWebDir);
+  server.log.info({ adminWebDir, rootDir }, "Admin web routes enabled.");
 
   server.get("/", async (_request, reply) => {
     return sendAdminWebFile(reply, rootDir, "index.html");
@@ -295,6 +298,18 @@ function registerAdminWebRoutes(server: FastifyInstance, adminWebDir: string | n
 
     return sendAdminWebFile(reply, rootDir, "index.html");
   });
+}
+
+function resolveAdminWebRoot(adminWebDir: string): string {
+  const candidates = [
+    adminWebDir,
+    "/app/apps/web/dist",
+    "/app/standalone/apps/web/dist",
+    resolve(process.cwd(), "apps/web/dist"),
+    resolve(process.cwd(), "standalone/apps/web/dist")
+  ];
+  const rootDir = candidates.find((candidate) => existsSync(resolve(candidate, "index.html")));
+  return resolve(rootDir ?? adminWebDir);
 }
 
 async function sendAdminWebFile(reply: FastifyReply, rootDir: string, requestedPath: string) {
