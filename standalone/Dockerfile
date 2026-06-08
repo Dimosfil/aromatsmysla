@@ -29,4 +29,4 @@ RUN mkdir -p /app/data/uploads
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "set -e; if [ -f /app/standalone/package.json ]; then cd /app/standalone; else cd /app; fi; test -f apps/api/dist/main.js || npm run build; if [ -f node_modules/tsx/dist/cli.mjs ]; then exec node node_modules/tsx/dist/cli.mjs apps/api/dist/main.js; fi; if [ -f ../node_modules/tsx/dist/cli.mjs ]; then exec node ../node_modules/tsx/dist/cli.mjs apps/api/dist/main.js; fi; echo 'tsx runtime not found' >&2; exit 1"]
+CMD ["sh", "-c", "set -e; if [ -f /app/standalone/package.json ]; then cd /app/standalone; else cd /app; fi; if [ ! -f apps/api/dist/main.js ]; then if [ ! -e node_modules/@telegram-bot-template/shared ]; then npm ci; fi; npm run build; fi; if [ -f node_modules/tsx/dist/cli.mjs ]; then exec node node_modules/tsx/dist/cli.mjs apps/api/dist/main.js; fi; if [ -f ../node_modules/tsx/dist/cli.mjs ]; then exec node ../node_modules/tsx/dist/cli.mjs apps/api/dist/main.js; fi; echo 'tsx runtime not found' >&2; exit 1"]

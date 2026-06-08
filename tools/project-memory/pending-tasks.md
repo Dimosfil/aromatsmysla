@@ -23,6 +23,7 @@ Planned changes:
 
 - [x] Update Docker startup command to choose `/app/standalone` when present.
 - [x] Verify the standalone build/start path locally without printing secrets.
+- [x] Ensure runtime builds restore workspace links before compiling on BotHost.
 
 ### Local Docker Env Startup
 
