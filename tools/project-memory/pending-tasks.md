@@ -157,3 +157,15 @@ Planned changes:
 - [x] Add seed fallback path resolution in the admin content store.
 - [x] Cover the wrong-env-path plus fallback-seed scenario with a focused test.
 - [x] Verify API tests/build.
+
+### BotHost Guide File Path Fallback
+
+Goal: make seeded guide PDF and media paths work for customer-facing BotHost
+deployments without manual admin uploads.
+
+Planned changes:
+
+- [x] Resolve relative guide/media paths across Docker and flattened BotHost
+  layouts.
+- [x] Add focused tests for path fallback resolution.
+- [x] Verify API tests/build.

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { basename, relative, resolve, sep } from "node:path";
 import type { BotBusinessResponse, TelegramInboundMessage, TelegramBotConfigStatus } from "@telegram-bot-template/shared";
 import { isValidTelegramToken, maskTelegramToken } from "./config";
 
@@ -176,8 +176,9 @@ export class TelegramPollingGateway {
   }
 
   private async sendBusinessResponse(response: BotBusinessResponse): Promise<void> {
-    if (response.photoPath && existsSync(response.photoPath)) {
-      await this.sendPhoto(response);
+    const photoPath = resolveTelegramFilePath(response.photoPath);
+    if (photoPath) {
+      await this.sendPhoto(response, photoPath);
     } else {
       await this.sendMessage(response);
     }
@@ -196,10 +197,10 @@ export class TelegramPollingGateway {
     });
   }
 
-  private async sendPhoto(response: BotBusinessResponse): Promise<void> {
+  private async sendPhoto(response: BotBusinessResponse, photoPath: string): Promise<void> {
     const formData = new FormData();
     formData.append("chat_id", response.chatId);
-    formData.append("photo", new Blob([readFileSync(response.photoPath!)]), basename(response.photoPath!));
+    formData.append("photo", new Blob([readFileSync(photoPath)]), basename(photoPath));
     formData.append("caption", response.text);
     const replyMarkup = this.createReplyMarkup(response);
     if (replyMarkup) {
@@ -210,9 +211,14 @@ export class TelegramPollingGateway {
   }
 
   private async sendDocument(chatId: string, documentPath: string): Promise<void> {
+    const resolvedDocumentPath = resolveTelegramFilePath(documentPath);
+    if (!resolvedDocumentPath) {
+      throw new Error(`Telegram document file not found: ${documentPath}`);
+    }
+
     const formData = new FormData();
     formData.append("chat_id", chatId);
-    formData.append("document", new Blob([readFileSync(documentPath)]), basename(documentPath));
+    formData.append("document", new Blob([readFileSync(resolvedDocumentPath)]), basename(resolvedDocumentPath));
 
     await this.callTelegramForm("sendDocument", formData);
   }
@@ -263,6 +269,59 @@ export class TelegramPollingGateway {
       )
     };
   }
+}
+
+export function resolveTelegramFilePath(filePath: string | undefined): string | null {
+  if (!filePath) {
+    return null;
+  }
+
+  const normalizedPath = filePath.trim();
+  if (!normalizedPath) {
+    return null;
+  }
+
+  for (const candidate of getTelegramFilePathCandidates(normalizedPath)) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function getTelegramFilePathCandidates(filePath: string): string[] {
+  const relativePath = toRelativeAppPath(filePath);
+  const candidates = [
+    filePath,
+    relativePath,
+    `bot/${relativePath}`,
+    `../${relativePath}`,
+    `../bot/${relativePath}`,
+    `/app/${relativePath}`,
+    `/app/bot/${relativePath}`
+  ];
+
+  return [
+    ...new Set(
+      candidates.map((candidate) => resolve(candidate))
+    )
+  ];
+}
+
+function toRelativeAppPath(filePath: string): string {
+  const resolvedPath = resolve(filePath);
+  const appBotRelative = relative("/app/bot", resolvedPath);
+  if (appBotRelative && !appBotRelative.startsWith("..") && appBotRelative !== ".") {
+    return appBotRelative.split(sep).join("/");
+  }
+
+  const appRelative = relative("/app", resolvedPath);
+  if (appRelative && !appRelative.startsWith("..") && appRelative !== ".") {
+    return appRelative.split(sep).join("/");
+  }
+
+  return filePath.replace(/^[a-zA-Z]:[\\/]/, "").replace(/^[/\\]+/, "").split(/[\\/]+/).join("/");
 }
 
 function delay(ms: number): Promise<void> {

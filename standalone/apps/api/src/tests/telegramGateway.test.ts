@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { loadApiConfig } from "../config";
 import { GuideBotAdminContentStore } from "../guideBotAdminContent";
 import { buildServer } from "../server";
+import { resolveTelegramFilePath } from "../telegramPollingGateway";
 
 const validToken = "123456789:abcdefghijklmnopqrstuvwxyz";
 
@@ -152,6 +153,26 @@ async function testGuideBotContentSeedFallback() {
     assert.equal(content.messages.welcomePrompt, "Seed welcome");
     assert.equal(content.guides[0]?.id, "seed-guide");
   } finally {
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+}
+
+async function testTelegramFilePathFallback() {
+  const rootDir = join(tmpdir(), `guide-file-path-${process.pid}-${Date.now()}`);
+  const runtimeDir = join(rootDir, "standalone");
+  const guidesDir = join(rootDir, "guides");
+  const originalCwd = process.cwd();
+  mkdirSync(runtimeDir, { recursive: true });
+  mkdirSync(guidesDir, { recursive: true });
+
+  const guidePath = join(guidesDir, "customer-guide.pdf");
+  writeFileSync(guidePath, "PDF bytes", "utf8");
+
+  try {
+    process.chdir(runtimeDir);
+    assert.equal(resolveTelegramFilePath("guides/customer-guide.pdf"), guidePath);
+  } finally {
+    process.chdir(originalCwd);
     rmSync(rootDir, { recursive: true, force: true });
   }
 }
@@ -556,6 +577,7 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 await testTelegramConfigRoutes();
 await testBotHostTokenFallback();
 await testGuideBotContentSeedFallback();
+await testTelegramFilePathFallback();
 await testInboundWorkflowWithoutTelegramApi();
 await testMockAiWorkflow();
 await testExtensionRoutes();
