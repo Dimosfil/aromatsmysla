@@ -13,6 +13,8 @@ export interface GuideOffer {
   id: string;
   title: string;
   filePath: string;
+  telegramFileId?: string;
+  telegramMessageLink?: string;
   buttonPrefix?: string;
 }
 

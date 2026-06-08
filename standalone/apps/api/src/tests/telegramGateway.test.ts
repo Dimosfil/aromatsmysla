@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { loadApiConfig } from "../config";
 import { GuideBotAdminContentStore } from "../guideBotAdminContent";
 import { buildServer } from "../server";
-import { resolveTelegramFilePath } from "../telegramPollingGateway";
+import { parseTelegramMessageLink, resolveTelegramFilePath } from "../telegramPollingGateway";
 
 const validToken = "123456789:abcdefghijklmnopqrstuvwxyz";
 
@@ -175,6 +175,18 @@ async function testTelegramFilePathFallback() {
     process.chdir(originalCwd);
     rmSync(rootDir, { recursive: true, force: true });
   }
+}
+
+async function testTelegramMessageLinkParsing() {
+  assert.deepEqual(parseTelegramMessageLink("https://t.me/aromatsmysla/123"), {
+    chatId: "@aromatsmysla",
+    messageId: 123
+  });
+  assert.deepEqual(parseTelegramMessageLink("https://t.me/c/1234567890/77"), {
+    chatId: "-1001234567890",
+    messageId: 77
+  });
+  assert.equal(parseTelegramMessageLink("https://example.com/aromatsmysla/123"), null);
 }
 
 async function testAdminGuideUploadAcceptsLargePdf() {
@@ -559,6 +571,52 @@ async function testGuideBotWorkflow() {
   }
 }
 
+async function testGuideBotTelegramMessageLinkWorkflow() {
+  const telegramFetch: typeof fetch = async (url) => {
+    assert.ok(String(url).endsWith("/getChatMember"));
+    return new Response(JSON.stringify({ ok: true, result: { status: "member" } }), {
+      status: 200,
+      headers: {
+        "content-type": "application/json"
+      }
+    });
+  };
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        TELEGRAM_BOT_TOKEN: validToken,
+        GUIDE_BOT_REQUIRED_CHANNEL_ID: "@demo_channel",
+        GUIDE_BOT_GUIDE_1_ID: "tg",
+        GUIDE_BOT_GUIDE_1_TITLE: "Telegram channel guide",
+        GUIDE_BOT_GUIDE_1_TELEGRAM_MESSAGE_LINK: "https://t.me/aromatsmysla/123"
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: `data/test-guide-bot-link-${process.pid}-${Date.now()}.sqlite3`,
+    telegramFetch
+  });
+
+  try {
+    const chosen = await server.inject({
+      method: "POST",
+      url: "/telegram/inbound",
+      payload: {
+        chatId: "guide-chat",
+        userId: "guide-user",
+        username: "reader",
+        text: "guide:tg",
+        callbackData: "guide:tg"
+      }
+    });
+    assert.equal(chosen.statusCode, 200);
+    const chosenBody = chosen.json<{ documentTelegramMessageLink?: string; documentPath?: string }>();
+    assert.equal(chosenBody.documentTelegramMessageLink, "https://t.me/aromatsmysla/123");
+    assert.equal(chosenBody.documentPath, "");
+  } finally {
+    await server.close();
+  }
+}
+
 async function testGuideBotSubscriptionCheckFailure() {
   const telegramFetch: typeof fetch = async (url) => {
     assert.ok(String(url).endsWith("/getChatMember"));
@@ -624,6 +682,7 @@ await testTelegramConfigRoutes();
 await testBotHostTokenFallback();
 await testGuideBotContentSeedFallback();
 await testTelegramFilePathFallback();
+await testTelegramMessageLinkParsing();
 await testAdminGuideUploadAcceptsLargePdf();
 await testInboundWorkflowWithoutTelegramApi();
 await testMockAiWorkflow();
@@ -632,6 +691,7 @@ await testSessionDebugRoute();
 await testLeadCaptureWorkflow();
 await testTelegramDiagnosticsRoute();
 await testGuideBotWorkflow();
+await testGuideBotTelegramMessageLinkWorkflow();
 await testGuideBotSubscriptionCheckFailure();
 
 console.log("Telegram gateway focused tests passed");

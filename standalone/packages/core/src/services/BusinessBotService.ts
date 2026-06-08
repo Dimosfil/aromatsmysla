@@ -203,7 +203,9 @@ export class BusinessBotService {
       text: `${this.getGuideCopy("deliveredPrefix", "Here is your guide:")} ${guide.title}`,
       status: "handled",
       photoPath: this.getGuideMedia("deliveredPhotoPath"),
-      documentPath: guide.filePath
+      documentPath: guide.filePath,
+      documentTelegramFileId: guide.telegramFileId,
+      documentTelegramMessageLink: guide.telegramMessageLink
     };
   }
 

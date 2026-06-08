@@ -179,3 +179,17 @@ Planned changes:
 - [x] Add a configurable upload body limit for guide bot uploads.
 - [x] Cover large PDF uploads with a focused API test.
 - [x] Verify API tests/build.
+
+### Telegram File ID Guide Delivery
+
+Goal: allow guide documents to be delivered from Telegram storage by file_id,
+while keeping local/admin-uploaded PDF paths working.
+
+Planned changes:
+
+- [x] Add `telegramFileId` to guide content/runtime/shared types.
+- [x] Send Telegram documents by `file_id` when configured, falling back to
+  local `filePath`.
+- [x] Add an admin field for Telegram file_id on each guide.
+- [x] Cover Telegram-link/file_id delivery with focused tests and run
+  verification.

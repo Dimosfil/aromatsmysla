@@ -25,6 +25,8 @@ export interface BotBusinessResponse {
   status: "handled" | "ignored";
   inlineKeyboard?: BotInlineButton[][];
   documentPath?: string;
+  documentTelegramFileId?: string;
+  documentTelegramMessageLink?: string;
   photoPath?: string;
 }
 
@@ -89,6 +91,8 @@ export interface GuideBotAdminGuide {
   id: string;
   title: string;
   filePath: string;
+  telegramFileId?: string;
+  telegramMessageLink?: string;
   buttonPrefix?: string;
 }
 

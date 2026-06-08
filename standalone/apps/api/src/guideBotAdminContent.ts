@@ -148,7 +148,7 @@ function normalizeAdminContent(content: GuideBotAdminContent): GuideBotAdminCont
       unavailableGuidePhotoPath: normalizeOptionalString(content.media?.unavailableGuidePhotoPath),
       deliveredPhotoPath: normalizeOptionalString(content.media?.deliveredPhotoPath)
     },
-    guides: (content.guides ?? []).map(normalizeGuide).filter((guide) => guide.id || guide.title || guide.filePath)
+    guides: (content.guides ?? []).map(normalizeGuide).filter((guide) => guide.id || guide.title || guide.filePath || guide.telegramFileId || guide.telegramMessageLink)
   };
 }
 
@@ -157,7 +157,9 @@ function normalizeGuide(guide: GuideBotAdminGuide): GuideBotAdminGuide {
     id: guide.id.trim(),
     title: guide.title.trim(),
     buttonPrefix: normalizeOptionalString(guide.buttonPrefix),
-    filePath: guide.filePath.trim()
+    filePath: guide.filePath.trim(),
+    telegramFileId: normalizeOptionalString(guide.telegramFileId),
+    telegramMessageLink: normalizeOptionalString(guide.telegramMessageLink)
   };
 }
 

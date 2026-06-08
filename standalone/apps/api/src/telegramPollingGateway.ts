@@ -39,6 +39,11 @@ interface TelegramUpdate {
   };
 }
 
+interface TelegramMessageReference {
+  chatId: string;
+  messageId: number;
+}
+
 export interface TelegramPollingGatewayOptions {
   fetchFn?: typeof fetch;
   pollIntervalMs?: number;
@@ -183,8 +188,18 @@ export class TelegramPollingGateway {
       await this.sendMessage(response);
     }
 
+    if (response.documentTelegramMessageLink) {
+      await this.copyDocumentMessage(response.chatId, response.documentTelegramMessageLink);
+      return;
+    }
+
+    if (response.documentTelegramFileId) {
+      await this.sendDocumentFileId(response.chatId, response.documentTelegramFileId);
+      return;
+    }
+
     if (response.documentPath) {
-      await this.sendDocument(response.chatId, response.documentPath);
+      await this.sendDocumentPath(response.chatId, response.documentPath);
     }
   }
 
@@ -210,7 +225,7 @@ export class TelegramPollingGateway {
     await this.callTelegramForm("sendPhoto", formData);
   }
 
-  private async sendDocument(chatId: string, documentPath: string): Promise<void> {
+  private async sendDocumentPath(chatId: string, documentPath: string): Promise<void> {
     const resolvedDocumentPath = resolveTelegramFilePath(documentPath);
     if (!resolvedDocumentPath) {
       throw new Error(`Telegram document file not found: ${documentPath}`);
@@ -221,6 +236,26 @@ export class TelegramPollingGateway {
     formData.append("document", new Blob([readFileSync(resolvedDocumentPath)]), basename(resolvedDocumentPath));
 
     await this.callTelegramForm("sendDocument", formData);
+  }
+
+  private async sendDocumentFileId(chatId: string, fileId: string): Promise<void> {
+    await this.callTelegram("sendDocument", {
+      chat_id: chatId,
+      document: fileId
+    });
+  }
+
+  private async copyDocumentMessage(chatId: string, messageLink: string): Promise<void> {
+    const reference = parseTelegramMessageLink(messageLink);
+    if (!reference) {
+      throw new Error(`Unsupported Telegram message link: ${messageLink}`);
+    }
+
+    await this.callTelegram("copyMessage", {
+      chat_id: chatId,
+      from_chat_id: reference.chatId,
+      message_id: reference.messageId
+    });
   }
 
   private async callTelegram<T>(method: string, payload: unknown): Promise<T> {
@@ -288,6 +323,43 @@ export function resolveTelegramFilePath(filePath: string | undefined): string | 
   }
 
   return null;
+}
+
+export function parseTelegramMessageLink(messageLink: string | undefined): TelegramMessageReference | null {
+  const normalizedLink = messageLink?.trim();
+  if (!normalizedLink) {
+    return null;
+  }
+
+  const privateMatch = normalizedLink.match(/^(?:https?:\/\/)?(?:t\.me|telegram\.me)\/c\/(\d+)\/(\d+)(?:[/?#].*)?$/i);
+  if (privateMatch) {
+    const [, rawChannelId, rawMessageId] = privateMatch;
+    const messageId = Number(rawMessageId);
+    if (!Number.isInteger(messageId) || messageId < 1) {
+      return null;
+    }
+
+    return {
+      chatId: `-100${rawChannelId}`,
+      messageId
+    };
+  }
+
+  const match = normalizedLink.match(/^(?:https?:\/\/)?(?:t\.me|telegram\.me)\/([^/?#]+)\/(\d+)(?:[/?#].*)?$/i);
+  if (!match) {
+    return null;
+  }
+
+  const [, rawChatId, rawMessageId] = match;
+  const messageId = Number(rawMessageId);
+  if (!Number.isInteger(messageId) || messageId < 1) {
+    return null;
+  }
+
+  return {
+    chatId: `@${rawChatId}`,
+    messageId
+  };
 }
 
 function getTelegramFilePathCandidates(filePath: string): string[] {

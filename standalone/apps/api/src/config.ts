@@ -35,6 +35,8 @@ export interface GuideRuntimeConfig {
   id: string;
   title: string;
   filePath: string;
+  telegramFileId?: string;
+  telegramMessageLink?: string;
   buttonPrefix?: string;
 }
 
@@ -142,8 +144,10 @@ function readGuideConfigs(env: NodeJS.ProcessEnv): GuideRuntimeConfig[] {
     const id = readOptionalString(env[`${prefix}_ID`]);
     const title = readOptionalString(env[`${prefix}_TITLE`]);
     const filePath = readOptionalString(env[`${prefix}_FILE_PATH`]);
+    const telegramFileId = readOptionalString(env[`${prefix}_TELEGRAM_FILE_ID`]) ?? undefined;
+    const telegramMessageLink = readOptionalString(env[`${prefix}_TELEGRAM_MESSAGE_LINK`]) ?? undefined;
     const buttonPrefix = readOptionalString(env[`${prefix}_BUTTON_PREFIX`]) ?? undefined;
-    if (!id && !title && !filePath) {
+    if (!id && !title && !filePath && !telegramFileId && !telegramMessageLink) {
       continue;
     }
 
@@ -151,6 +155,8 @@ function readGuideConfigs(env: NodeJS.ProcessEnv): GuideRuntimeConfig[] {
       id: id ?? "",
       title: title ?? "",
       filePath: filePath ?? "",
+      telegramFileId,
+      telegramMessageLink,
       buttonPrefix
     });
   }
@@ -309,8 +315,8 @@ function validateConfig(config: ApiConfig): void {
       if (!guide.title) {
         issues.push(`${prefix}_TITLE must not be empty.`);
       }
-      if (!guide.filePath) {
-        issues.push(`${prefix}_FILE_PATH must not be empty.`);
+      if (!guide.filePath && !guide.telegramFileId && !guide.telegramMessageLink) {
+        issues.push(`${prefix}_FILE_PATH, ${prefix}_TELEGRAM_FILE_ID, or ${prefix}_TELEGRAM_MESSAGE_LINK must be set.`);
       }
     }
   }

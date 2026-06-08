@@ -608,6 +608,21 @@ function GuideEditor({
         onPathChange={(filePath) => onChange({ ...guide, filePath })}
         onUpload={onUpload}
       />
+      <label>
+        Ссылка на пост Telegram
+        <input
+          value={guide.telegramMessageLink ?? ""}
+          onChange={(event) => onChange({ ...guide, telegramMessageLink: event.target.value })}
+          placeholder="https://t.me/channel/123"
+        />
+      </label>
+      <label>
+        Telegram file_id
+        <input
+          value={guide.telegramFileId ?? ""}
+          onChange={(event) => onChange({ ...guide, telegramFileId: event.target.value })}
+        />
+      </label>
     </article>
   );
 }
@@ -641,6 +656,8 @@ function createEmptyGuide(): GuideBotAdminGuide {
     id: "",
     title: "",
     filePath: "",
+    telegramFileId: "",
+    telegramMessageLink: "",
     buttonPrefix: ""
   };
 }
