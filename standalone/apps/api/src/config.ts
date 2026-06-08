@@ -74,7 +74,7 @@ export function loadApiConfig(options: LoadApiConfigOptions = {}): ApiConfig {
   const config: ApiConfig = {
     host: readString(env.API_HOST, "127.0.0.1"),
     port: readPort(env.API_PORT ?? env.PORT, 3000),
-    telegramBotToken: readOptionalString(env.TELEGRAM_BOT_TOKEN),
+    telegramBotToken: readTelegramBotToken(env),
     telegramPollingEnabled: readBoolean(env.TELEGRAM_POLLING_ENABLED, false),
     guideBot: readGuideBotConfig(env),
     sqliteIndexPath: readString(env.SQLITE_INDEX_PATH, "storage/index.sqlite3"),
@@ -109,6 +109,15 @@ function readGuideBotConfig(env: NodeJS.ProcessEnv): GuideBotRuntimeConfig | nul
     guides,
     copy: readGuideBotCopyConfig(env)
   };
+}
+
+function readTelegramBotToken(env: NodeJS.ProcessEnv): string | null {
+  return (
+    readOptionalString(env.TELEGRAM_BOT_TOKEN) ??
+    readOptionalString(env.BOT_TOKEN) ??
+    readOptionalString(env.BOT_API_TOKEN) ??
+    readOptionalString(env.API_TOKEN)
+  );
 }
 
 function readGuideBotCopyConfig(env: NodeJS.ProcessEnv): GuideBotCopyConfig {

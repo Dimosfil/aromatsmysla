@@ -81,6 +81,17 @@ async function testTelegramConfigRoutes() {
   }
 }
 
+async function testBotHostTokenFallback() {
+  const config = loadApiConfig({
+    env: {
+      BOT_TOKEN: validToken
+    },
+    loadEnvFile: false
+  });
+
+  assert.equal(config.telegramBotToken, validToken);
+}
+
 async function testInboundWorkflowWithoutTelegramApi() {
   const fetchCalls: string[] = [];
   const server = buildServer({
@@ -479,6 +490,7 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 }
 
 await testTelegramConfigRoutes();
+await testBotHostTokenFallback();
 await testInboundWorkflowWithoutTelegramApi();
 await testMockAiWorkflow();
 await testExtensionRoutes();

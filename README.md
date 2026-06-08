@@ -10,7 +10,7 @@ another repository or profile folder, replace `.env.local`, update
 Local private config:
 
 ```text
-D:\AI\tg-bots\aromatsmysla\.env.local
+<this bot profile root>\.env.local
 ```
 
 Run this bot:
@@ -42,9 +42,9 @@ Use these form choices:
 - Additional settings: enable `Use domain` for the web admin.
 - Additional settings: enable `Use custom Dockerfile`.
 - Main file: leave empty when custom Dockerfile is enabled.
-- Repository: point to the deployment repository rooted at
-  `D:\AI\tg-bots\aromatsmysla`. That repository should contain the files from
-  this bot profile, including `Dockerfile`, `.dockerignore`,
+- Repository: point to the deployment repository rooted at this bot profile.
+  That repository should contain the files from this bot profile, including
+  `Dockerfile`, `.dockerignore`,
   `env.bothost.example`, `content.seed.json`, and `standalone/`.
 - Branch: the branch that contains this folder.
 

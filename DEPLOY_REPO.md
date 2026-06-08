@@ -3,7 +3,7 @@
 Target git repository root:
 
 ```text
-D:\AI\tg-bots\aromatsmysla
+<this bot profile repository root>
 ```
 
 Copy these files and folders to that repository:
@@ -29,7 +29,7 @@ Do not copy or commit:
 - logs
 - generated `node_modules/` or `dist/`
 
-On the hosting platform, use the repository root above, enable the custom
+On the hosting platform, use the deployment repository root, enable the custom
 Dockerfile option, choose `Node.js`, enable a domain for the admin panel, and
 upload variables from `env.bothost.example`. Leave the main file empty when the
 custom Dockerfile option is enabled. Keep bot copy, channel button URL, guide

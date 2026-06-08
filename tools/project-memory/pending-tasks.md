@@ -14,6 +14,27 @@ generated outputs, secrets, credentials, or private production data.
 
 ## Tasks
 
+### BotHost Terminal Constraints
+
+Observation: BotHost web terminal is an allowlisted shell inside the running
+container, not a full Docker host shell.
+
+Known constraints:
+
+- [x] `docker ps` and other Docker control commands are blocked by BotHost
+  security policy.
+- [x] Shell/JS snippets containing command separators or separator-like tokens
+  can be rejected with `Использование разделителей команд запрещено`.
+- [x] `ps` is allowed and shows the Node API process when the app is running.
+- [x] Node `fetch("http://127.0.0.1:3000/health")` works for API smoke checks
+  when written without suspicious shell separators.
+
+Diagnostic preference:
+
+- [x] Prefer simple `ps`, `env`, and minimal `node -e` one-liners.
+- [x] Avoid recommending `docker ps`, `docker exec`, chained shell commands, or
+  complex JS one-liners for BotHost terminal troubleshooting.
+
 ### BotHost Workspace Link Build
 
 Goal: make BotHost runtime builds restore npm workspace links before TypeScript
@@ -93,6 +114,17 @@ Verification:
 - [x] `npm run smoke:api` in `standalone/`.
 - [!] `docker build -t aromatsmysla-bothost-check .` requires Docker Desktop
   daemon; it was not running locally.
+
+### BotHost Admin Web Root Fallback
+
+Goal: make the deployed API serve the admin panel even when BotHost runs from
+either the flattened Docker image layout or a repository-root workspace layout.
+
+Planned changes:
+
+- [x] Confirm BotHost logs show the web build succeeds but `/` returns 404.
+- [x] Add admin web root fallback resolution for known runtime layouts.
+- [x] Verify build and a local admin-root request.
 
 ### TODO Task Name
 
