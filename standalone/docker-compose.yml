@@ -2,6 +2,8 @@ services:
   guide-bot:
     build:
       context: .
+    env_file:
+      - .env
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-3000}:3000"

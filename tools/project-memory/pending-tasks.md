@@ -14,6 +14,34 @@ generated outputs, secrets, credentials, or private production data.
 
 ## Tasks
 
+### Local Docker Env Startup
+
+Goal: start the guide bot container with the private local runtime env.
+
+Planned changes:
+
+- [x] Check that `.env.local` exists and contains required values without
+  printing secrets.
+- [x] Pass the local env file into Docker Compose.
+- [x] Recreate the container and verify `/health` from the host.
+
+### Docker Runtime ESM Startup
+
+Goal: make the Docker runtime start the built API successfully on Node.js 20.
+
+Planned changes:
+
+- [x] Verify local Docker build and runtime failure mode.
+- [x] Update Docker entrypoint to use the working ESM-compatible runner.
+- [x] Rebuild and smoke-check the container locally.
+
+Verification:
+
+- [x] `docker build -t aromatsmysla-local:latest .`
+- [x] Confirm `/app/apps/api/dist/main.js` exists inside the image.
+- [x] Check `/health` and admin web root on the local container.
+- [x] `docker build -t aromatsmysla-standalone-local:latest .\standalone`
+
 ### BotHost Deploy Push Prep
 
 Goal: prepare the repository root for a safe Git push and BotHost custom
