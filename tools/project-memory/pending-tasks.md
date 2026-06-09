@@ -210,3 +210,18 @@ Planned changes:
 - [x] Add roles, persistent admin sessions, user management, and password change endpoints.
 - [x] Add admin UI for users and password changes.
 - [x] Update focused API tests and run verification.
+
+### Configuration Boundary Audit
+
+Goal: align the existing codebase with the instruction-kit rule that
+deployment, user, runtime, service, credential, path, feature-flag, and
+operational-policy values belong in project-local config, environment variables,
+service discovery records, or secret references.
+
+Planned changes:
+
+- [ ] Audit targeted runtime, deploy, and admin paths for hard-coded ports, URLs,
+  hostnames, credentials, private paths, user names, feature toggles, limits,
+  model names, deployment folders, and environment-specific switches.
+- [ ] Refactor low-risk findings into existing configuration surfaces.
+- [ ] Record any larger cleanup items as separate durable tasks.

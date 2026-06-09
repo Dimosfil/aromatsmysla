@@ -76,6 +76,17 @@ could help other projects. Keep recommendations concise, evidence-backed, and
 free of secrets, private user data, production data, and unnecessary
 project-specific details.
 
+Do not hard-code values that can change by deployment, user choice, runtime
+environment, host machine, service discovery, credentials, filesystem layout,
+feature flags, or operational policy. Keep application code focused on logic,
+constants, and internal defaults; move deploy/user/environment/system values
+into documented project-local configuration, environment variables, or service
+discovery records. Avoid embedding machine-specific absolute paths in source or
+shared instructions; when paths are accepted from config, resolve and validate
+them as absolute paths at the application boundary. When applying this rule to
+existing projects, audit and refactor relevant hard-coded values instead of only
+adding the rule text.
+
 When maintaining a shared instruction-library project, a user request to add or
 accept a reusable rule may also be treated as approval to finish that accepted
 instruction change end to end: update the relevant files, verify them, commit
