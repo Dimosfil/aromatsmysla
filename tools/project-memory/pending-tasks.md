@@ -204,3 +204,9 @@ Planned changes:
 - [x] Add an admin field for Telegram file_id on each guide.
 - [x] Cover Telegram-link/file_id delivery with focused tests and run
   verification.
+# 2026-06-09 Auth Module
+
+- [x] Move admin credentials from env-only checks into SQLite-backed auth users.
+- [x] Add roles, persistent admin sessions, user management, and password change endpoints.
+- [x] Add admin UI for users and password changes.
+- [x] Update focused API tests and run verification.

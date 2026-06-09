@@ -235,6 +235,107 @@ async function testAdminGuideUploadAcceptsLargePdf() {
   }
 }
 
+async function testAdminAuthUsersAndRoles() {
+  const rootDir = join(tmpdir(), `admin-auth-${process.pid}-${Date.now()}`);
+  mkdirSync(rootDir, { recursive: true });
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        ADMIN_USERNAME: "owner",
+        ADMIN_PASSWORD: "owner-secret",
+        GUIDE_BOT_CONTENT_PATH: join(rootDir, "content.json"),
+        GUIDE_BOT_UPLOAD_DIR: join(rootDir, "uploads")
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: join(rootDir, "sessions.sqlite3")
+  });
+
+  try {
+    const ownerLogin = await server.inject({
+      method: "POST",
+      url: "/admin/login",
+      payload: {
+        username: "owner",
+        password: "owner-secret"
+      }
+    });
+    assert.equal(ownerLogin.statusCode, 200);
+    const ownerToken = ownerLogin.json<{ token: string; role: string }>().token;
+    assert.equal(ownerLogin.json<{ role: string }>().role, "owner");
+
+    const created = await server.inject({
+      method: "POST",
+      url: "/admin/users",
+      headers: {
+        authorization: `Bearer ${ownerToken}`
+      },
+      payload: {
+        username: "editor",
+        password: "editor-secret",
+        role: "editor"
+      }
+    });
+    assert.equal(created.statusCode, 201);
+
+    const editorLogin = await server.inject({
+      method: "POST",
+      url: "/admin/login",
+      payload: {
+        username: "editor",
+        password: "editor-secret"
+      }
+    });
+    assert.equal(editorLogin.statusCode, 200);
+    const editorToken = editorLogin.json<{ token: string; role: string }>().token;
+    assert.equal(editorLogin.json<{ role: string }>().role, "editor");
+
+    const forbiddenUsers = await server.inject({
+      method: "GET",
+      url: "/admin/users",
+      headers: {
+        authorization: `Bearer ${editorToken}`
+      }
+    });
+    assert.equal(forbiddenUsers.statusCode, 403);
+
+    const passwordChange = await server.inject({
+      method: "POST",
+      url: "/admin/me/password",
+      headers: {
+        authorization: `Bearer ${editorToken}`
+      },
+      payload: {
+        currentPassword: "editor-secret",
+        newPassword: "editor-secret-2"
+      }
+    });
+    assert.equal(passwordChange.statusCode, 204);
+
+    const oldSession = await server.inject({
+      method: "GET",
+      url: "/admin/me",
+      headers: {
+        authorization: `Bearer ${editorToken}`
+      }
+    });
+    assert.equal(oldSession.statusCode, 401);
+
+    const newEditorLogin = await server.inject({
+      method: "POST",
+      url: "/admin/login",
+      payload: {
+        username: "editor",
+        password: "editor-secret-2"
+      }
+    });
+    assert.equal(newEditorLogin.statusCode, 200);
+  } finally {
+    await server.close();
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+}
+
 async function testInboundWorkflowWithoutTelegramApi() {
   const fetchCalls: string[] = [];
   const server = buildServer({
@@ -684,6 +785,7 @@ await testGuideBotContentSeedFallback();
 await testTelegramFilePathFallback();
 await testTelegramMessageLinkParsing();
 await testAdminGuideUploadAcceptsLargePdf();
+await testAdminAuthUsersAndRoles();
 await testInboundWorkflowWithoutTelegramApi();
 await testMockAiWorkflow();
 await testExtensionRoutes();

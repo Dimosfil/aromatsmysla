@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 import { extname, relative, resolve, sep } from "node:path";
@@ -6,8 +5,6 @@ import Fastify from "fastify";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { BusinessBotService, createExampleExtension } from "@telegram-bot-template/core";
 import type {
-  AdminLoginRequest,
-  AdminLoginResponse,
   AdminStatsResponse,
   AdminUploadResponse,
   HealthResponse,
@@ -29,6 +26,9 @@ import { registerExtensions } from "./extensions/registerExtensions";
 import { TelegramSubscriptionChecker } from "./TelegramSubscriptionChecker";
 import { TelegramPollingGateway } from "./telegramPollingGateway";
 import { applyAdminContentToRuntimeConfig, GuideBotAdminContentStore } from "./guideBotAdminContent";
+import { AdminAuthService } from "./auth/AdminAuthService";
+import { registerAdminAuthRoutes, requireAdminPermission } from "./auth/adminAuthRoutes";
+import { SqliteAdminAuthRepository } from "./auth/SqliteAdminAuthRepository";
 
 export interface BuildServerOptions {
   config?: ApiConfig;
@@ -56,12 +56,15 @@ export function buildServer(options: BuildServerOptions = {}) {
     config.guideBotUploadDir,
     config.guideBotContentSeedPath
   );
-  const adminSessions = new Set<string>();
   if (adminContentOverlayEnabled) {
     applyAdminContentToRuntimeConfig(guideBotConfig, adminContentStore.read(guideBotConfig));
   }
   const database = new SqliteDatabase({
     databasePath: options.sqliteSessionPath ?? config.sqliteSessionPath
+  });
+  const adminAuth = new AdminAuthService(new SqliteAdminAuthRepository(database), {
+    username: config.adminUsername,
+    password: config.adminPassword
   });
   const sessions = new SqliteSessionRepository(database);
   const leads = new SqliteLeadRepository(database);
@@ -106,7 +109,7 @@ export function buildServer(options: BuildServerOptions = {}) {
 
   server.addHook("onRequest", async (request, reply) => {
     reply.header("Access-Control-Allow-Origin", "*");
-    reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
+    reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,OPTIONS");
     reply.header("Access-Control-Allow-Headers", "Authorization,Content-Type,X-File-Name");
 
     if (request.method === "OPTIONS") {
@@ -125,38 +128,27 @@ export function buildServer(options: BuildServerOptions = {}) {
     return telegramGateway.getStatus();
   });
 
-  server.post<{ Body: AdminLoginRequest }>("/admin/login", async (request, reply): Promise<AdminLoginResponse | unknown> => {
-    if (request.body.username !== config.adminUsername || request.body.password !== config.adminPassword) {
-      return reply.code(401).send({ error: "Invalid username or password." });
-    }
-
-    const token = randomUUID();
-    adminSessions.add(token);
-    return {
-      token,
-      username: config.adminUsername
-    };
-  });
+  registerAdminAuthRoutes(server, adminAuth);
 
   server.get("/admin/guide-bot/content", async (request, reply): Promise<GuideBotAdminContent | unknown> => {
-    if (!isAdminRequestAuthorized(request.headers.authorization, adminSessions)) {
-      return reply.code(401).send({ error: "Admin login required." });
+    if (!(await requireAdminPermission(adminAuth, request.headers.authorization, "content:read", reply))) {
+      return reply;
     }
 
     return adminContentStore.read(guideBotConfig);
   });
 
   server.get("/admin/stats", async (request, reply): Promise<AdminStatsResponse | unknown> => {
-    if (!isAdminRequestAuthorized(request.headers.authorization, adminSessions)) {
-      return reply.code(401).send({ error: "Admin login required." });
+    if (!(await requireAdminPermission(adminAuth, request.headers.authorization, "stats:read", reply))) {
+      return reply;
     }
 
     return analytics.getAdminStats();
   });
 
   server.put<{ Body: GuideBotAdminContent }>("/admin/guide-bot/content", async (request, reply): Promise<GuideBotAdminContent | unknown> => {
-    if (!isAdminRequestAuthorized(request.headers.authorization, adminSessions)) {
-      return reply.code(401).send({ error: "Admin login required." });
+    if (!(await requireAdminPermission(adminAuth, request.headers.authorization, "content:write", reply))) {
+      return reply;
     }
 
     try {
@@ -179,8 +171,8 @@ export function buildServer(options: BuildServerOptions = {}) {
     "/admin/guide-bot/uploads",
     { bodyLimit: config.guideBotUploadMaxBytes },
     async (request, reply): Promise<AdminUploadResponse | unknown> => {
-      if (!isAdminRequestAuthorized(request.headers.authorization, adminSessions)) {
-        return reply.code(401).send({ error: "Admin login required." });
+      if (!(await requireAdminPermission(adminAuth, request.headers.authorization, "content:write", reply))) {
+        return reply;
       }
 
       const fileName = request.headers["x-file-name"];
@@ -271,11 +263,6 @@ export function buildServer(options: BuildServerOptions = {}) {
   });
 
   return server;
-}
-
-function isAdminRequestAuthorized(authorization: string | undefined, sessions: Set<string>): boolean {
-  const [scheme, token] = authorization?.split(" ") ?? [];
-  return scheme === "Bearer" && Boolean(token) && sessions.has(token);
 }
 
 function registerAdminWebRoutes(server: FastifyInstance, adminWebDir: string | null): void {

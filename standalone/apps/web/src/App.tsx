@@ -1,9 +1,17 @@
 ﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type {
+  AdminChangePasswordRequest,
+  AdminCreateUserRequest,
   AdminLoginResponse,
+  AdminMeResponse,
+  AdminResetPasswordRequest,
   AdminStatsResponse,
+  AdminUpdateUserRequest,
   AdminUploadResponse,
+  AdminUserDto,
+  AdminUserRole,
+  AdminUsersResponse,
   GuideBotAdminContent,
   GuideBotAdminGuide,
   GuideBotAdminMedia,
@@ -16,7 +24,7 @@ const tokenStorageKey = "guide-bot-admin-token";
 type MessageKey = keyof GuideBotAdminMessages;
 type MediaKey = keyof GuideBotAdminMedia;
 type SaveState = "idle" | "saving" | "saved" | "error";
-type ActiveTab = "content" | "stats";
+type ActiveTab = "content" | "stats" | "users";
 
 const messageFields: Array<{ key: MessageKey; label: string; mediaKey?: MediaKey }> = [
   { key: "welcomePrompt", label: "Первое сообщение /start", mediaKey: "welcomePhotoPath" },
@@ -55,6 +63,13 @@ async function login(username: string, password: string): Promise<AdminLoginResp
   return readApiResponse<AdminLoginResponse>(response);
 }
 
+async function fetchMe(token: string): Promise<AdminMeResponse> {
+  const response = await fetch(`${apiBaseUrl}/admin/me`, {
+    headers: createAuthHeaders(token)
+  });
+  return readApiResponse<AdminMeResponse>(response);
+}
+
 async function fetchContent(token: string): Promise<GuideBotAdminContent> {
   const response = await fetch(`${apiBaseUrl}/admin/guide-bot/content`, {
     headers: createAuthHeaders(token)
@@ -81,6 +96,61 @@ async function fetchStats(token: string): Promise<AdminStatsResponse> {
   return readApiResponse<AdminStatsResponse>(response);
 }
 
+async function fetchUsers(token: string): Promise<AdminUsersResponse> {
+  const response = await fetch(`${apiBaseUrl}/admin/users`, {
+    headers: createAuthHeaders(token)
+  });
+  return readApiResponse<AdminUsersResponse>(response);
+}
+
+async function createUser(token: string, user: AdminCreateUserRequest): Promise<AdminUserDto> {
+  const response = await fetch(`${apiBaseUrl}/admin/users`, {
+    method: "POST",
+    headers: {
+      ...createAuthHeaders(token),
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(user)
+  });
+  return readApiResponse<AdminUserDto>(response);
+}
+
+async function updateUser(token: string, userId: string, patch: AdminUpdateUserRequest): Promise<AdminUserDto> {
+  const response = await fetch(`${apiBaseUrl}/admin/users/${userId}`, {
+    method: "PATCH",
+    headers: {
+      ...createAuthHeaders(token),
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(patch)
+  });
+  return readApiResponse<AdminUserDto>(response);
+}
+
+async function changePassword(token: string, request: AdminChangePasswordRequest): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/admin/me/password`, {
+    method: "POST",
+    headers: {
+      ...createAuthHeaders(token),
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+  await readApiResponse<void>(response);
+}
+
+async function resetUserPassword(token: string, userId: string, request: AdminResetPasswordRequest): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/admin/users/${userId}/password`, {
+    method: "POST",
+    headers: {
+      ...createAuthHeaders(token),
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+  await readApiResponse<void>(response);
+}
+
 async function uploadFile(token: string, file: File): Promise<AdminUploadResponse> {
   const response = await fetch(`${apiBaseUrl}/admin/guide-bot/uploads`, {
     method: "POST",
@@ -104,7 +174,14 @@ export function App() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [uploadStatus, setUploadStatus] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("content");
+  const [usersStatus, setUsersStatus] = useState("");
+  const [passwordStatus, setPasswordStatus] = useState("");
 
+  const meQuery = useQuery({
+    queryKey: ["guide-bot-admin-me", token],
+    queryFn: () => fetchMe(token),
+    enabled: Boolean(token)
+  });
   const contentQuery = useQuery({
     queryKey: ["guide-bot-admin-content", token],
     queryFn: () => fetchContent(token),
@@ -115,6 +192,11 @@ export function App() {
     queryFn: () => fetchStats(token),
     enabled: Boolean(token) && activeTab === "stats"
   });
+  const usersQuery = useQuery({
+    queryKey: ["guide-bot-admin-users", token],
+    queryFn: () => fetchUsers(token),
+    enabled: Boolean(token) && activeTab === "users" && canManageUsers(meQuery.data?.user)
+  });
 
   useEffect(() => {
     if (contentQuery.data) {
@@ -123,17 +205,19 @@ export function App() {
   }, [contentQuery.data]);
 
   useEffect(() => {
-    if (isUnauthorizedError(contentQuery.error) || isUnauthorizedError(statsQuery.error)) {
+    if (isUnauthorizedError(meQuery.error) || isUnauthorizedError(contentQuery.error) || isUnauthorizedError(statsQuery.error) || isUnauthorizedError(usersQuery.error)) {
       localStorage.removeItem(tokenStorageKey);
       setToken("");
       setLoginError("Сессия устарела. Войдите еще раз.");
     }
-  }, [contentQuery.error, statsQuery.error]);
+  }, [contentQuery.error, meQuery.error, statsQuery.error, usersQuery.error]);
 
   const hasSession = Boolean(token);
   const isSaving = saveState === "saving";
-  const isSyncing = contentQuery.isFetching || statsQuery.isFetching;
+  const isSyncing = meQuery.isFetching || contentQuery.isFetching || statsQuery.isFetching || usersQuery.isFetching;
   const canSave = useMemo(() => hasSession && !contentQuery.isLoading && !isSaving, [contentQuery.isLoading, hasSession, isSaving]);
+  const currentUser = meQuery.data?.user;
+  const userCanManageUsers = canManageUsers(currentUser);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -142,6 +226,7 @@ export function App() {
       const result = await login(username.trim(), password);
       localStorage.setItem(tokenStorageKey, result.token);
       setToken(result.token);
+      setUsername(result.username);
       setPassword("");
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : String(error));
@@ -192,6 +277,69 @@ export function App() {
     localStorage.removeItem(tokenStorageKey);
     setToken("");
     setDraft(emptyContent);
+    setActiveTab("content");
+  }
+
+  async function handleChangePassword(request: AdminChangePasswordRequest) {
+    if (!token) {
+      return;
+    }
+
+    setPasswordStatus("Меняю пароль...");
+    try {
+      await changePassword(token, request);
+      localStorage.removeItem(tokenStorageKey);
+      setToken("");
+      setPasswordStatus("");
+      setLoginError("Пароль изменен. Войдите с новым паролем.");
+    } catch (error) {
+      setPasswordStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function handleCreateUser(request: AdminCreateUserRequest) {
+    if (!token) {
+      return;
+    }
+
+    setUsersStatus("Создаю пользователя...");
+    try {
+      await createUser(token, request);
+      setUsersStatus("Пользователь создан.");
+      await usersQuery.refetch();
+    } catch (error) {
+      setUsersStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function handleUpdateUser(userId: string, patch: AdminUpdateUserRequest) {
+    if (!token) {
+      return;
+    }
+
+    setUsersStatus("Сохраняю пользователя...");
+    try {
+      await updateUser(token, userId, patch);
+      setUsersStatus("Пользователь обновлен.");
+      await usersQuery.refetch();
+      await meQuery.refetch();
+    } catch (error) {
+      setUsersStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function handleResetPassword(userId: string, password: string) {
+    if (!token) {
+      return;
+    }
+
+    setUsersStatus("Меняю пароль пользователя...");
+    try {
+      await resetUserPassword(token, userId, { password });
+      setUsersStatus("Пароль пользователя изменен.");
+    } catch (error) {
+      setUsersStatus(error instanceof Error ? error.message : String(error));
+    }
   }
 
   if (!hasSession) {
@@ -226,14 +374,20 @@ export function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">Aroma guide bot</p>
-            <h1>{activeTab === "stats" ? "Статистика бота" : "Контент бота"}</h1>
+            <h1>{activeTab === "stats" ? "Статистика бота" : activeTab === "users" ? "Пользователи" : "Контент бота"}</h1>
           </div>
           <div className="topbar-actions">
-            <span className="status">{isSyncing ? "syncing" : "ready"}</span>
+            <span className="status">{currentUser ? `${currentUser.username} · ${currentUser.role}` : isSyncing ? "syncing" : "ready"}</span>
             <button
               type="button"
               className="secondary-action"
-              onClick={() => (activeTab === "stats" ? void statsQuery.refetch() : void contentQuery.refetch())}
+              onClick={() =>
+                activeTab === "stats"
+                  ? void statsQuery.refetch()
+                  : activeTab === "users"
+                    ? void usersQuery.refetch()
+                    : void contentQuery.refetch()
+              }
             >
               Обновить
             </button>
@@ -258,13 +412,34 @@ export function App() {
           >
             Статистика
           </button>
+          {userCanManageUsers ? (
+            <button
+              type="button"
+              className={activeTab === "users" ? "tab-button active" : "tab-button"}
+              onClick={() => setActiveTab("users")}
+            >
+              Пользователи
+            </button>
+          ) : null}
         </nav>
 
         {activeTab === "content" && contentQuery.isError ? <p className="field-error">{String(contentQuery.error)}</p> : null}
         {activeTab === "stats" && statsQuery.isError ? <p className="field-error">{String(statsQuery.error)}</p> : null}
+        {activeTab === "users" && usersQuery.isError ? <p className="field-error">{String(usersQuery.error)}</p> : null}
 
         {activeTab === "stats" ? (
           <StatsPanel stats={statsQuery.data} isLoading={statsQuery.isLoading} onRefresh={() => void statsQuery.refetch()} />
+        ) : activeTab === "users" ? (
+          <UsersPanel
+            currentUser={currentUser}
+            users={usersQuery.data?.users ?? []}
+            status={usersStatus}
+            passwordStatus={passwordStatus}
+            onCreate={(request) => void handleCreateUser(request)}
+            onUpdate={(userId, patch) => void handleUpdateUser(userId, patch)}
+            onResetPassword={(userId, nextPassword) => void handleResetPassword(userId, nextPassword)}
+            onChangePassword={(request) => void handleChangePassword(request)}
+          />
         ) : (
           <form className="admin-layout" onSubmit={(event) => void handleSave(event)}>
             <section className="editor-section">
@@ -377,6 +552,229 @@ export function App() {
         )}
       </section>
     </main>
+  );
+}
+
+function UsersPanel({
+  currentUser,
+  users,
+  status,
+  passwordStatus,
+  onCreate,
+  onUpdate,
+  onResetPassword,
+  onChangePassword
+}: {
+  currentUser?: AdminUserDto;
+  users: AdminUserDto[];
+  status: string;
+  passwordStatus: string;
+  onCreate: (request: AdminCreateUserRequest) => void;
+  onUpdate: (userId: string, patch: AdminUpdateUserRequest) => void;
+  onResetPassword: (userId: string, nextPassword: string) => void;
+  onChangePassword: (request: AdminChangePasswordRequest) => void;
+}) {
+  const [newUser, setNewUser] = useState<AdminCreateUserRequest>({
+    username: "",
+    displayName: "",
+    role: "editor",
+    password: ""
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: ""
+  });
+
+  return (
+    <section className="users-layout">
+      <div className="section-heading">
+        <h2>Доступы</h2>
+        {status ? <span className="save-status">{status}</span> : null}
+      </div>
+
+      <form
+        className="editor-card"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onCreate(newUser);
+          setNewUser({ username: "", displayName: "", role: "editor", password: "" });
+        }}
+      >
+        <h3>Новый пользователь</h3>
+        <div className="user-form-grid">
+          <label>
+            Логин
+            <input value={newUser.username} onChange={(event) => setNewUser({ ...newUser, username: event.target.value })} />
+          </label>
+          <label>
+            Имя
+            <input value={newUser.displayName ?? ""} onChange={(event) => setNewUser({ ...newUser, displayName: event.target.value })} />
+          </label>
+          <label>
+            Роль
+            <RoleSelect value={newUser.role} onChange={(role) => setNewUser({ ...newUser, role })} />
+          </label>
+          <label>
+            Пароль
+            <input
+              type="password"
+              value={newUser.password}
+              onChange={(event) => setNewUser({ ...newUser, password: event.target.value })}
+            />
+          </label>
+        </div>
+        <div className="action-row">
+          <button type="submit" className="primary-action">
+            Создать
+          </button>
+        </div>
+      </form>
+
+      <form
+        className="editor-card"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onChangePassword({
+            currentPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword
+          });
+          setPasswordForm({ currentPassword: "", newPassword: "" });
+        }}
+      >
+        <h3>Мой пароль</h3>
+        <div className="user-form-grid">
+          <label>
+            Текущий пароль
+            <input
+              type="password"
+              value={passwordForm.currentPassword}
+              onChange={(event) => setPasswordForm({ ...passwordForm, currentPassword: event.target.value })}
+            />
+          </label>
+          <label>
+            Новый пароль
+            <input
+              type="password"
+              value={passwordForm.newPassword}
+              onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })}
+            />
+          </label>
+        </div>
+        {passwordStatus ? <p className="setup-status">{passwordStatus}</p> : null}
+        <div className="action-row">
+          <button type="submit" className="secondary-action">
+            Сменить пароль
+          </button>
+        </div>
+      </form>
+
+      <div className="users-list">
+        {users.map((user) => (
+          <UserEditor
+            key={user.id}
+            currentUser={currentUser}
+            user={user}
+            onUpdate={(patch) => onUpdate(user.id, patch)}
+            onResetPassword={(nextPassword) => onResetPassword(user.id, nextPassword)}
+          />
+        ))}
+        {!users.length ? <p className="setup-status">Пользователи еще не загружены.</p> : null}
+      </div>
+    </section>
+  );
+}
+
+function UserEditor({
+  currentUser,
+  user,
+  onUpdate,
+  onResetPassword
+}: {
+  currentUser?: AdminUserDto;
+  user: AdminUserDto;
+  onUpdate: (patch: AdminUpdateUserRequest) => void;
+  onResetPassword: (nextPassword: string) => void;
+}) {
+  const [draft, setDraft] = useState<AdminUpdateUserRequest>({
+    username: user.username,
+    displayName: user.displayName ?? "",
+    role: user.role,
+    active: user.active
+  });
+  const [nextPassword, setNextPassword] = useState("");
+
+  useEffect(() => {
+    setDraft({
+      username: user.username,
+      displayName: user.displayName ?? "",
+      role: user.role,
+      active: user.active
+    });
+  }, [user]);
+
+  return (
+    <article className="editor-card user-card">
+      <div className="section-heading">
+        <h3>{user.displayName || user.username}</h3>
+        <span className={user.active ? "role-pill" : "role-pill muted"}>{user.active ? user.role : "disabled"}</span>
+      </div>
+      <div className="user-form-grid">
+        <label>
+          Логин
+          <input value={draft.username ?? ""} onChange={(event) => setDraft({ ...draft, username: event.target.value })} />
+        </label>
+        <label>
+          Имя
+          <input value={draft.displayName ?? ""} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} />
+        </label>
+        <label>
+          Роль
+          <RoleSelect value={draft.role ?? user.role} onChange={(role) => setDraft({ ...draft, role })} />
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={draft.active ?? false}
+            onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
+          />
+          Активен
+        </label>
+      </div>
+      <div className="action-row">
+        <button type="button" className="primary-action" onClick={() => onUpdate(draft)}>
+          Сохранить
+        </button>
+        {currentUser?.id === user.id ? <span className="setup-status">Это вы</span> : null}
+      </div>
+      <div className="password-reset-row">
+        <label>
+          Новый пароль
+          <input type="password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
+        </label>
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={() => {
+            onResetPassword(nextPassword);
+            setNextPassword("");
+          }}
+        >
+          Сбросить
+        </button>
+      </div>
+      <p className="setup-status">Пароль обновлен: {new Date(user.passwordChangedAt).toLocaleString()}</p>
+    </article>
+  );
+}
+
+function RoleSelect({ value, onChange }: { value: AdminUserRole; onChange: (role: AdminUserRole) => void }) {
+  return (
+    <select value={value} onChange={(event) => onChange(event.target.value as AdminUserRole)}>
+      <option value="owner">owner</option>
+      <option value="admin">admin</option>
+      <option value="editor">editor</option>
+      <option value="viewer">viewer</option>
+    </select>
   );
 }
 
@@ -666,6 +1064,10 @@ function createAuthHeaders(token: string): Record<string, string> {
   return {
     authorization: `Bearer ${token}`
   };
+}
+
+function canManageUsers(user: AdminUserDto | undefined): boolean {
+  return user?.role === "owner" || user?.role === "admin";
 }
 
 async function readApiResponse<T>(response: Response): Promise<T> {

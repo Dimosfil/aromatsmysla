@@ -85,6 +85,51 @@ export interface AdminLoginRequest {
 export interface AdminLoginResponse {
   token: string;
   username: string;
+  role: AdminUserRole;
+}
+
+export type AdminUserRole = "owner" | "admin" | "editor" | "viewer";
+
+export interface AdminUserDto {
+  id: string;
+  username: string;
+  displayName?: string;
+  role: AdminUserRole;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  passwordChangedAt: string;
+}
+
+export interface AdminMeResponse {
+  user: AdminUserDto;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUserDto[];
+}
+
+export interface AdminCreateUserRequest {
+  username: string;
+  password: string;
+  displayName?: string;
+  role: AdminUserRole;
+}
+
+export interface AdminUpdateUserRequest {
+  username?: string;
+  displayName?: string;
+  role?: AdminUserRole;
+  active?: boolean;
+}
+
+export interface AdminChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface AdminResetPasswordRequest {
+  password: string;
 }
 
 export interface GuideBotAdminGuide {

@@ -49,7 +49,8 @@ Use these form choices:
 - Branch: the branch that contains this folder.
 
 Upload or paste variables from `env.bothost.example`. Set a strong
-`ADMIN_PASSWORD`; keep `API_HOST=0.0.0.0` and `API_PORT=3000`.
+`ADMIN_PASSWORD` for the first owner account; keep `API_HOST=0.0.0.0` and
+`API_PORT=3000`.
 
 The hosting form's `Bot Token` should provide `TELEGRAM_BOT_TOKEN`. If the
 platform does not map that field to the container environment, add
@@ -66,6 +67,10 @@ PDFs in `standalone/bot/content.seed.json` for Docker deploys or
 API checks both first-run seed locations. Admin edits are saved to
 `GUIDE_BOT_CONTENT_PATH`; these values should not be managed as deployment env
 variables.
+
+Admin users, roles, password hashes, and login sessions are stored in SQLite.
+`ADMIN_USERNAME` and `ADMIN_PASSWORD` are used only to create the first `owner`
+when the database has no admin users yet.
 
 For many bots, keep each profile in `bots/<bot-id>/` and give each running bot a
 different `API_PORT` and `SQLITE_SESSION_PATH` when running them at the same

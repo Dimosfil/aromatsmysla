@@ -20,7 +20,7 @@ Copy-Item env.docker.example .env
 Edit `.env`:
 
 - set `TELEGRAM_BOT_TOKEN`;
-- set a strong `ADMIN_PASSWORD`;
+- set a strong `ADMIN_PASSWORD` for the first owner account;
 - verify `GUIDE_BOT_REQUIRED_CHANNEL_ID`;
 - keep first-run guide titles, messages, photos, and guide files in
   `bot/content.seed.json`, then edit them from the admin panel after the first
@@ -67,15 +67,21 @@ platform does not map that field to the container environment, add
 `docker-compose.yml` mounts `./data` to `/app/data`. This folder stores:
 
 - SQLite files;
+- admin users, roles, password hashes, and login sessions;
 - edited bot content from the admin panel;
 - uploaded guide/media files.
 
 Back up `./data` before moving hosts or replacing the container.
 
+`ADMIN_USERNAME` and `ADMIN_PASSWORD` are bootstrap values only. On the first
+startup with an empty SQLite database, the API creates an active `owner` user
+from them. After that, manage users, roles, and password resets from the admin
+panel.
+
 ## Content Ownership
 
-Deployment environment variables are for infrastructure: token, channel, admin
-login, SQLite paths, and data paths. Bot copy, channel URL, guide titles,
+Deployment environment variables are for infrastructure: token, channel,
+bootstrap admin login, SQLite paths, and data paths. Bot copy, channel URL, guide titles,
 button prefixes, selection photos, and delivered files are runtime content.
 First-run defaults live in `bot/content.seed.json`; admin edits are stored in
 `GUIDE_BOT_CONTENT_PATH`.

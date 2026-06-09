@@ -66,6 +66,39 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_event_type
 CREATE INDEX IF NOT EXISTS idx_analytics_events_user_id
   ON analytics_events(user_id);
 `
+  },
+  {
+    id: "005_create_admin_auth",
+    sql: `
+CREATE TABLE IF NOT EXISTS admin_users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  display_name TEXT,
+  role TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  password_salt TEXT NOT NULL,
+  password_iterations INTEGER NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  password_changed_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_users_username
+  ON admin_users(username);
+
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  token TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  revoked_at TEXT,
+  FOREIGN KEY (user_id) REFERENCES admin_users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id
+  ON admin_sessions(user_id);
+`
   }
 ];
 
