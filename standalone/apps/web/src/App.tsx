@@ -312,7 +312,7 @@ export function App() {
     }
   }
 
-  async function handleUpdateUser(userId: string, patch: AdminUpdateUserRequest) {
+  async function handleSaveUser(userId: string, patch: AdminUpdateUserRequest, nextPassword?: string) {
     if (!token) {
       return;
     }
@@ -320,7 +320,11 @@ export function App() {
     setUsersStatus("Сохраняю пользователя...");
     try {
       await updateUser(token, userId, patch);
-      setUsersStatus("Пользователь обновлен.");
+      if (nextPassword?.trim()) {
+        setUsersStatus("Меняю пароль пользователя...");
+        await resetUserPassword(token, userId, { password: nextPassword });
+      }
+      setUsersStatus(nextPassword?.trim() ? "Пользователь и пароль обновлены." : "Пользователь обновлен.");
       await usersQuery.refetch();
       await meQuery.refetch();
     } catch (error) {
@@ -337,6 +341,8 @@ export function App() {
     try {
       await resetUserPassword(token, userId, { password });
       setUsersStatus("Пароль пользователя изменен.");
+      await usersQuery.refetch();
+      await meQuery.refetch();
     } catch (error) {
       setUsersStatus(error instanceof Error ? error.message : String(error));
     }
@@ -436,7 +442,7 @@ export function App() {
             status={usersStatus}
             passwordStatus={passwordStatus}
             onCreate={(request) => void handleCreateUser(request)}
-            onUpdate={(userId, patch) => void handleUpdateUser(userId, patch)}
+            onSaveUser={(userId, patch, nextPassword) => void handleSaveUser(userId, patch, nextPassword)}
             onResetPassword={(userId, nextPassword) => void handleResetPassword(userId, nextPassword)}
             onChangePassword={(request) => void handleChangePassword(request)}
           />
@@ -561,7 +567,7 @@ function UsersPanel({
   status,
   passwordStatus,
   onCreate,
-  onUpdate,
+  onSaveUser,
   onResetPassword,
   onChangePassword
 }: {
@@ -570,7 +576,7 @@ function UsersPanel({
   status: string;
   passwordStatus: string;
   onCreate: (request: AdminCreateUserRequest) => void;
-  onUpdate: (userId: string, patch: AdminUpdateUserRequest) => void;
+  onSaveUser: (userId: string, patch: AdminUpdateUserRequest, nextPassword?: string) => void;
   onResetPassword: (userId: string, nextPassword: string) => void;
   onChangePassword: (request: AdminChangePasswordRequest) => void;
 }) {
@@ -618,6 +624,7 @@ function UsersPanel({
             Пароль
             <input
               type="password"
+              minLength={8}
               value={newUser.password}
               onChange={(event) => setNewUser({ ...newUser, password: event.target.value })}
             />
@@ -655,6 +662,7 @@ function UsersPanel({
             Новый пароль
             <input
               type="password"
+              minLength={8}
               value={passwordForm.newPassword}
               onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })}
             />
@@ -674,7 +682,7 @@ function UsersPanel({
             key={user.id}
             currentUser={currentUser}
             user={user}
-            onUpdate={(patch) => onUpdate(user.id, patch)}
+            onSave={(patch, nextPassword) => onSaveUser(user.id, patch, nextPassword)}
             onResetPassword={(nextPassword) => onResetPassword(user.id, nextPassword)}
           />
         ))}
@@ -687,12 +695,12 @@ function UsersPanel({
 function UserEditor({
   currentUser,
   user,
-  onUpdate,
+  onSave,
   onResetPassword
 }: {
   currentUser?: AdminUserDto;
   user: AdminUserDto;
-  onUpdate: (patch: AdminUpdateUserRequest) => void;
+  onSave: (patch: AdminUpdateUserRequest, nextPassword?: string) => void;
   onResetPassword: (nextPassword: string) => void;
 }) {
   const [draft, setDraft] = useState<AdminUpdateUserRequest>({
@@ -713,7 +721,14 @@ function UserEditor({
   }, [user]);
 
   return (
-    <article className="editor-card user-card">
+    <form
+      className="editor-card user-card"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(draft, nextPassword);
+        setNextPassword("");
+      }}
+    >
       <div className="section-heading">
         <h3>{user.displayName || user.username}</h3>
         <span className={user.active ? "role-pill" : "role-pill muted"}>{user.active ? user.role : "disabled"}</span>
@@ -741,7 +756,7 @@ function UserEditor({
         </label>
       </div>
       <div className="action-row">
-        <button type="button" className="primary-action" onClick={() => onUpdate(draft)}>
+        <button type="submit" className="primary-action">
           Сохранить
         </button>
         {currentUser?.id === user.id ? <span className="setup-status">Это вы</span> : null}
@@ -749,11 +764,12 @@ function UserEditor({
       <div className="password-reset-row">
         <label>
           Новый пароль
-          <input type="password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
+          <input type="password" minLength={8} value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
         </label>
         <button
           type="button"
           className="secondary-action"
+          disabled={!nextPassword.trim()}
           onClick={() => {
             onResetPassword(nextPassword);
             setNextPassword("");
@@ -763,7 +779,7 @@ function UserEditor({
         </button>
       </div>
       <p className="setup-status">Пароль обновлен: {new Date(user.passwordChangedAt).toLocaleString()}</p>
-    </article>
+    </form>
   );
 }
 

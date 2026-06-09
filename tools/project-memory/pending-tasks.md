@@ -14,6 +14,18 @@ generated outputs, secrets, credentials, or private production data.
 
 ## Tasks
 
+### Admin User Password Save
+
+Goal: make password changes for existing admin users save through the expected
+user edit flow.
+
+Planned changes:
+
+- [x] Make the existing-user save action apply a filled "new password" field.
+- [x] Refresh user data after password reset so timestamps and status are clear.
+- [x] Add focused API coverage for admin password reset and new-login behavior.
+- [x] Run focused verification.
+
 ### BotHost Terminal Constraints
 
 Observation: BotHost web terminal is an allowlisted shell inside the running

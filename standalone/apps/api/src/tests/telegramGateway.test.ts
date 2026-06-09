@@ -330,6 +330,38 @@ async function testAdminAuthUsersAndRoles() {
       }
     });
     assert.equal(newEditorLogin.statusCode, 200);
+
+    const resetPassword = await server.inject({
+      method: "POST",
+      url: `/admin/users/${created.json<{ id: string }>().id}/password`,
+      headers: {
+        authorization: `Bearer ${ownerToken}`
+      },
+      payload: {
+        password: "editor-secret-3"
+      }
+    });
+    assert.equal(resetPassword.statusCode, 204);
+
+    const previousPasswordLogin = await server.inject({
+      method: "POST",
+      url: "/admin/login",
+      payload: {
+        username: "editor",
+        password: "editor-secret-2"
+      }
+    });
+    assert.equal(previousPasswordLogin.statusCode, 401);
+
+    const resetPasswordLogin = await server.inject({
+      method: "POST",
+      url: "/admin/login",
+      payload: {
+        username: "editor",
+        password: "editor-secret-3"
+      }
+    });
+    assert.equal(resetPasswordLogin.statusCode, 200);
   } finally {
     await server.close();
     rmSync(rootDir, { recursive: true, force: true });
