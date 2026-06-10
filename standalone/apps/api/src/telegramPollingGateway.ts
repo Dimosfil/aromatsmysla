@@ -289,7 +289,16 @@ export class TelegramPollingGateway {
     return responseBody.result as T;
   }
 
-  private createReplyMarkup(response: BotBusinessResponse): { inline_keyboard: Array<Array<Record<string, string>>> } | undefined {
+  private createReplyMarkup(response: BotBusinessResponse): Record<string, unknown> | undefined {
+    if (response.replyKeyboard) {
+      return {
+        keyboard: response.replyKeyboard,
+        resize_keyboard: true,
+        one_time_keyboard: false,
+        is_persistent: true
+      };
+    }
+
     if (!response.inlineKeyboard) {
       return undefined;
     }

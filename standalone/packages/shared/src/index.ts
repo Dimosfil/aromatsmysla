@@ -19,11 +19,16 @@ export interface BotInlineButton {
   url?: string;
 }
 
+export interface BotReplyKeyboardButton {
+  text: string;
+}
+
 export interface BotBusinessResponse {
   chatId: string;
   text: string;
   status: "handled" | "ignored";
   inlineKeyboard?: BotInlineButton[][];
+  replyKeyboard?: BotReplyKeyboardButton[][];
   documentPath?: string;
   documentTelegramFileId?: string;
   documentTelegramMessageLink?: string;

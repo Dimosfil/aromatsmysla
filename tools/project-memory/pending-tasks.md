@@ -14,6 +14,18 @@ generated outputs, secrets, credentials, or private production data.
 
 ## Tasks
 
+### Telegram Reply Keyboard Buttons
+
+Goal: add support for Telegram reply-keyboard buttons shown under the message
+input.
+
+Planned changes:
+
+- [x] Add shared response typing for reply keyboards.
+- [x] Serialize reply keyboards in the Telegram polling gateway.
+- [x] Attach a guide-bot menu keyboard to relevant responses.
+- [x] Add focused verification for the Telegram API payload.
+
 ### Admin User Password Save
 
 Goal: make password changes for existing admin users save through the expected

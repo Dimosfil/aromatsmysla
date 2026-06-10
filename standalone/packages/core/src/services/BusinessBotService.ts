@@ -1,4 +1,4 @@
-import type { BotBusinessResponse, BotInlineButton, TelegramInboundMessage } from "@telegram-bot-template/shared";
+import type { BotBusinessResponse, TelegramInboundMessage } from "@telegram-bot-template/shared";
 import { isLeadCommand, isOzonCommand, isStartCommand } from "@telegram-bot-template/shared";
 import type { GuideOffer } from "../models";
 import type { AiRouter, AnalyticsRepository, LeadRepository, SessionRepository, SubscriptionChecker } from "../ports";
@@ -47,8 +47,17 @@ export class BusinessBotService {
       return this.handleGuideSubscriptionCheck(message);
     }
 
+    if (this.dependencies.guideBot && this.isGuideSubscriptionCheckText(message.text)) {
+      return this.handleGuideSubscriptionCheck(message);
+    }
+
     if (this.dependencies.guideBot && message.callbackData?.startsWith("guide:")) {
       return this.handleGuideChoice(message, message.callbackData.slice("guide:".length));
+    }
+
+    const guideFromReplyKeyboard = this.dependencies.guideBot ? this.findGuideByReplyKeyboardText(message.text) : undefined;
+    if (guideFromReplyKeyboard) {
+      return this.handleGuideChoice(message, guideFromReplyKeyboard.id);
     }
 
     if (isOzonCommand(message)) {
@@ -111,11 +120,10 @@ export class BusinessBotService {
       text: this.getGuideCopy("welcomePrompt", this.getGuideCopy("subscribedPrompt", "Great, subscription confirmed. Choose the guide you want:")),
       status: "handled",
       photoPath: this.getGuideMedia("welcomePhotoPath"),
-      inlineKeyboard: [
+      replyKeyboard: [
         [
           {
-            text: this.getGuideCopy("checkSubscriptionButton", "Subscription confirmed"),
-            callbackData: "guide:check_subscription"
+            text: this.getGuideCopy("checkSubscriptionButton", "Subscription confirmed")
           }
         ]
       ]
@@ -215,26 +223,19 @@ export class BusinessBotService {
       text: this.getGuideCopy("subscribedPrompt", "Great, subscription confirmed. Choose the guide you want:"),
       status: "handled",
       photoPath: this.dependencies.guideBot!.selectionPhotoPath,
-      inlineKeyboard: this.createGuideSelectionKeyboard()
+      replyKeyboard: this.createGuideSelectionKeyboard()
     };
   }
 
-  private createGuideSelectionKeyboard(): BotBusinessResponse["inlineKeyboard"] {
+  private createGuideSelectionKeyboard(): BotBusinessResponse["replyKeyboard"] {
     const guideBot = this.dependencies.guideBot!;
-    const keyboard: BotInlineButton[][] = guideBot.guides.map((guide) => [
-      {
-        text: `${guide.buttonPrefix ? `${guide.buttonPrefix} ` : ""}${guide.title}`,
-        callbackData: `guide:${guide.id}`
-      }
-    ]);
-
-    if (guideBot.requiredChannelUrl) {
-      keyboard.push([
-        {
-          text: this.getGuideCopy("channelButtonText", "Open channel"),
-          url: guideBot.requiredChannelUrl
-        }
-      ]);
+    const keyboard: NonNullable<BotBusinessResponse["replyKeyboard"]> = [];
+    for (let index = 0; index < guideBot.guides.length; index += 2) {
+      keyboard.push(
+        guideBot.guides.slice(index, index + 2).map((guide) => ({
+          text: this.getGuideButtonText(guide)
+        }))
+      );
     }
 
     return keyboard;
@@ -268,6 +269,19 @@ export class BusinessBotService {
 
   private getGuideCopy(key: keyof GuideBotCopy, fallback: string): string {
     return this.dependencies.guideBot?.copy?.[key] ?? fallback;
+  }
+
+  private isGuideSubscriptionCheckText(text: string): boolean {
+    return text.trim() === this.getGuideCopy("checkSubscriptionButton", "Subscription confirmed");
+  }
+
+  private findGuideByReplyKeyboardText(text: string): GuideOffer | undefined {
+    const normalizedText = text.trim();
+    return this.dependencies.guideBot!.guides.find((guide) => normalizedText === this.getGuideButtonText(guide));
+  }
+
+  private getGuideButtonText(guide: GuideOffer): string {
+    return `${guide.buttonPrefix ? `${guide.buttonPrefix} ` : ""}${guide.title}`;
   }
 
   private getGuideMedia(key: keyof GuideBotMedia): string | undefined {

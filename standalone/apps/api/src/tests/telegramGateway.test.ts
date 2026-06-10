@@ -97,6 +97,100 @@ async function testBotHostTokenFallback() {
   assert.equal(config.telegramBotToken, validToken);
 }
 
+async function testTelegramReplyKeyboardPayload() {
+  let updatesSent = false;
+  const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
+  const telegramFetch: typeof fetch = async (url, init) => {
+    fetchCalls.push({
+      url: String(url),
+      init
+    });
+
+    if (String(url).endsWith("/getUpdates")) {
+      if (updatesSent) {
+        return new Response(JSON.stringify({ ok: true, result: [] }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        });
+      }
+
+      updatesSent = true;
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            {
+              update_id: 1,
+              message: {
+                chat: {
+                  id: "guide-chat"
+                },
+                from: {
+                  id: 42,
+                  username: "reader"
+                },
+                text: "/start"
+              }
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    }
+
+    return new Response(JSON.stringify({ ok: true, result: {} }), {
+      status: 200,
+      headers: {
+        "content-type": "application/json"
+      }
+    });
+  };
+
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        TELEGRAM_BOT_TOKEN: validToken,
+        TELEGRAM_POLLING_ENABLED: "true",
+        GUIDE_BOT_REQUIRED_CHANNEL_ID: "@demo_channel",
+        GUIDE_BOT_COPY_CHECK_SUBSCRIPTION_BUTTON: "Check subscription",
+        GUIDE_BOT_GUIDE_1_ID: "tg",
+        GUIDE_BOT_GUIDE_1_TITLE: "Telegram launch guide",
+        GUIDE_BOT_GUIDE_1_FILE_PATH: "guides/telegram-launch.pdf"
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: `data/test-reply-keyboard-${process.pid}-${Date.now()}.sqlite3`,
+    telegramFetch,
+    telegramPollIntervalMs: 25,
+    telegramRetryDelayMs: 1
+  });
+
+  try {
+    await waitFor(() => fetchCalls.some((call) => call.url.endsWith("/sendMessage")));
+    const sendMessage = fetchCalls.find((call) => call.url.endsWith("/sendMessage"));
+    assert.ok(sendMessage, "Expected polling gateway to send a Telegram message.");
+    const body = JSON.parse(String(sendMessage.init?.body)) as {
+      reply_markup?: {
+        keyboard?: Array<Array<{ text: string }>>;
+        resize_keyboard?: boolean;
+        is_persistent?: boolean;
+      };
+    };
+    assert.equal(body.reply_markup?.keyboard?.[0]?.[0]?.text, "Check subscription");
+    assert.equal(body.reply_markup?.resize_keyboard, true);
+    assert.equal(body.reply_markup?.is_persistent, true);
+  } finally {
+    await server.close();
+  }
+}
+
 async function testGuideBotContentSeedFallback() {
   const rootDir = join(tmpdir(), `guide-content-seed-${process.pid}-${Date.now()}`);
   const dataDir = join(rootDir, "data");
@@ -623,7 +717,7 @@ async function testGuideBotWorkflow() {
         GUIDE_BOT_COPY_CHANNEL_BUTTON_TEXT: "Open demo channel",
         GUIDE_BOT_GUIDE_1_ID: "tg",
         GUIDE_BOT_GUIDE_1_TITLE: "Telegram launch guide",
-        GUIDE_BOT_GUIDE_1_BUTTON_PREFIX: "🌿",
+        GUIDE_BOT_GUIDE_1_BUTTON_PREFIX: "*",
         GUIDE_BOT_GUIDE_1_FILE_PATH: "guides/telegram-launch.pdf"
       },
       loadEnvFile: false
@@ -647,10 +741,10 @@ async function testGuideBotWorkflow() {
     const startBody = start.json<{
       text: string;
       photoPath?: string;
-      inlineKeyboard?: Array<Array<{ text: string; callbackData?: string; url?: string }>>;
+      replyKeyboard?: Array<Array<{ text: string }>>;
     }>();
     assert.match(startBody.text, /Choose your aroma guide/i);
-    assert.equal(startBody.inlineKeyboard?.[0]?.[0]?.callbackData, "guide:check_subscription");
+    assert.equal(startBody.replyKeyboard?.[0]?.[0]?.text, "Subscription confirmed");
 
     const check = await server.inject({
       method: "POST",
@@ -667,14 +761,11 @@ async function testGuideBotWorkflow() {
     const checkBody = check.json<{
       text: string;
       photoPath?: string;
-      inlineKeyboard?: Array<Array<{ text: string; callbackData?: string; url?: string }>>;
+      replyKeyboard?: Array<Array<{ text: string }>>;
     }>();
     assert.match(checkBody.text, /aroma guide/i);
     assert.equal(checkBody.photoPath, "bots/demo/assets/second-screen-photo.jpg");
-    assert.equal(checkBody.inlineKeyboard?.[0]?.[0]?.text, "🌿 Telegram launch guide");
-    assert.equal(checkBody.inlineKeyboard?.[0]?.[0]?.callbackData, "guide:tg");
-    assert.equal(checkBody.inlineKeyboard?.[1]?.[0]?.text, "Open demo channel");
-    assert.equal(checkBody.inlineKeyboard?.[1]?.[0]?.url, "https://t.me/demo_channel");
+    assert.equal(checkBody.replyKeyboard?.[0]?.[0]?.text, "* Telegram launch guide");
 
     const chosen = await server.inject({
       method: "POST",
@@ -683,8 +774,7 @@ async function testGuideBotWorkflow() {
         chatId: "guide-chat",
         userId: "guide-user",
         username: "reader",
-        text: "guide:tg",
-        callbackData: "guide:tg"
+        text: "* Telegram launch guide"
       }
     });
     assert.equal(chosen.statusCode, 200);
@@ -813,6 +903,7 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 
 await testTelegramConfigRoutes();
 await testBotHostTokenFallback();
+await testTelegramReplyKeyboardPayload();
 await testGuideBotContentSeedFallback();
 await testTelegramFilePathFallback();
 await testTelegramMessageLinkParsing();
