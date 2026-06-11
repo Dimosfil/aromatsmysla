@@ -249,3 +249,17 @@ Planned changes:
   model names, deployment folders, and environment-specific switches.
 - [ ] Refactor low-risk findings into existing configuration surfaces.
 - [ ] Record any larger cleanup items as separate durable tasks.
+
+### Instruction Kit Update 2026.06.11.5
+
+Goal: apply pending shared instruction-kit migrations through version
+2026.06.11.5 without touching runtime behavior or unrelated work.
+
+Planned changes:
+
+- [x] Add RAG cleanup, SQLite classification, feature workflow contract, feature
+  planning hierarchy, and task-manager config-service rules to local
+  instructions.
+- [x] Add a project-local feature workflow contract template.
+- [x] Record applied instruction-kit metadata after verification.
+- [x] Run focused checks and commit/push only the scoped instruction update.

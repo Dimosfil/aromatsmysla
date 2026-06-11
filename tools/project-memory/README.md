@@ -79,6 +79,8 @@ Markdown as the concise reviewable export.
 ## Suggested Files
 
 - `pending-tasks.md`: active project-wide plans and multi-step work.
+- `features/`: durable feature ideas, workflow contracts, implementation plans,
+  sprint breakdowns, and task definitions of done for non-trivial features.
 - `STUDY_PLAN.md`: roadmap for understanding the project.
 - `git-preferences.json`: commit-message language preferences.
 - `system-preferences.json`: agent user-facing working language preferences.

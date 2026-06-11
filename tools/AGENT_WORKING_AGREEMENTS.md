@@ -224,6 +224,16 @@ or:
 - Prefer patch-style edits for manual changes.
 - Avoid unrelated formatting churn.
 - Add comments only when they clarify non-obvious behavior.
+- Do not remove agent-facing RAG/startup assets such as `AGENTS.md`, `tools/`,
+  `tools/project-memory/`, `skills/`, bootstrap scripts, update scripts, deploy
+  scripts, or instruction/config files merely because they look internal.
+  Inspect their purpose first, and delete them only after explicit user
+  confirmation that they are temporary or unrelated.
+- Classify `*.sqlite`, `*.sqlite3`, and `*.db` files before deleting or
+  committing them. Keep rebuildable agent-memory indexes ignored when useful;
+  commit reviewable README files, Markdown/JSON exports, schemas, and indexing
+  scripts. Never commit databases containing secrets, private data, telemetry,
+  task-manager state, absolute local paths, or agent conversation history.
 
 ## Task Planning
 
@@ -235,6 +245,16 @@ or:
 - Update progress as meaningful steps complete.
 - Keep plans concise. Do not store full diffs, large logs, generated outputs,
   secrets, credentials, or private production data.
+- For non-trivial features, keep a durable project-local feature document with
+  the feature idea, functional description, workflow contract, implementation
+  plan, sprint breakdown, tasks, definitions of done, and verification.
+- Treat feature contracts as behavior guarantees. Before changing a feature with
+  a recorded contract, read the contract and preserve the agreed sequence,
+  branches, blocking/background work, loading/empty/error states,
+  cancellation/retry behavior, data freshness, observability, and verification
+  unless the user explicitly changes the agreement.
+- Sprint and task lists do not replace the feature workflow contract: tasks say
+  what to change, while the contract says what behavior must remain true.
 
 ## Shared Instruction Updates
 
@@ -263,6 +283,13 @@ or:
   do not store, guess, or copy API endpoints from old notes or other projects.
 - If a configured manager id is missing from config-service, stop with a concise
   blocker instead of falling back to port scans or stale task-manager memory.
+- Treat `gi manager`, `gi tm`, `gi manager test`, `gi менеджер`, and
+  `ги манагер` as task-manager inspection commands. Read the enabled manager id
+  or `service_id` from project-local task-manager config, resolve it through
+  `GET /services/{serviceId}`, read `endpoints.guide` when present, read
+  `endpoints.contract`, and use `endpoints.api` only for documented manager
+  operations. Ignore legacy `base_url` values unless a local migration rule
+  explicitly converts them into config-service records.
 - Before posting plans or starting sprint work, read the manager guide when
   present, then verify the workflow-specific manager contract and capabilities,
   not only generic health.

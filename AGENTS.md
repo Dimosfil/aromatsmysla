@@ -162,6 +162,19 @@ Inspect logs:
   reapply only the intended small patch.
 - Ask before destructive operations, broad refactors, or unrelated scope
   expansion.
+- Do not remove `AGENTS.md`, `tools/`, `tools/project-memory/`, `skills/`,
+  bootstrap scripts, update scripts, deploy scripts, or agent-facing
+  instruction/config files merely because they look internal. Inspect their
+  purpose first and treat them as possible RAG/startup infrastructure. Delete
+  them only when the user explicitly confirms they are temporary or unrelated to
+  the project.
+- Before deleting or committing `*.sqlite`, `*.sqlite3`, or `*.db` files,
+  classify whether they are application data, agent-memory indexes, generated
+  caches, test fixtures, or private local state. Keep rebuildable agent-memory
+  indexes ignored when appropriate. Commit reviewable README files,
+  Markdown/JSON memory exports, schemas, and indexing scripts when useful.
+  Never commit databases containing secrets, private data, telemetry,
+  task-manager state, absolute local paths, or agent conversation history.
 - Treat this project root as the filesystem boundary for normal work. Do not
   read, search, edit, create, delete, move, or inspect files in another project
   or arbitrary external folder unless the user gives an explicit concrete path
@@ -197,6 +210,13 @@ Inspect logs:
   contract as workflow validation. If they disagree, stop and report the
   mismatch. Do not infer permissions from filesystem paths, stale memory, old
   dashboard URLs, or raw task receipts.
+- Treat `gi manager`, `gi tm`, `gi manager test`, `gi менеджер`, and
+  `ги манагер` as task-manager inspection commands. Read the enabled manager id
+  or `service_id` from project-local task-manager config, resolve it through GI
+  config-service with `GET /services/{serviceId}`, read `endpoints.guide` when
+  present, read `endpoints.contract`, and use `endpoints.api` only for
+  documented manager operations. Ignore legacy `base_url` values unless a local
+  migration rule explicitly converts them into config-service records.
 - Treat `gi config service on`, `gi config service off`, `ги конфиг сервис on`,
   and `ги конфиг сервис off` as requests to set the current application's
   project-local config-service self-registration flag. `on` means the app
@@ -254,6 +274,18 @@ Inspect logs:
   prefer mock or sample data, or ask for permission to inspect a specific file.
 - Treat product plans, `apps.txt`, summaries, and task-manager notes as intent
   signals only. They are not permission to read private local data sources.
+- When the user or team agrees that a feature must work in a specific sequence
+  or state flow, record it as a project-local feature workflow contract. Before
+  changing a feature with a recorded contract, read the contract and preserve
+  its user-visible guarantees unless the user explicitly changes them. If
+  implementation changes the agreed workflow, update the contract in the same
+  scoped change and report the behavior change.
+- For non-trivial features, keep a durable project-local feature document with
+  the feature idea, functional description, workflow contract, implementation
+  plan, sprint breakdown, tasks, definitions of done, and verification. Tasks
+  say what to change; the workflow contract says what behavior must remain true.
+  Before marking a task done, confirm it did not break the agreed sequence,
+  branch, loading behavior, background work, or user-visible promise.
 - If a required file, skill, config, script, endpoint, task, or other entity is
   missing or not found, first reread the relevant local instructions, runbook,
   project memory, and accepted instruction-kit artifacts for the current scope.
