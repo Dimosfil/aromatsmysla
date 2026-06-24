@@ -2,6 +2,12 @@
 
 For AI agents: read AGENTS.md first.
 
+This repository is a deployable Telegram guide bot profile for `aromatsmysla`.
+It combines a Fastify API, Telegram polling gateway, SQLite-backed admin/session
+storage, and a React admin panel packaged under `standalone/`.
+
+Stack inventory: `tools/project-memory/specs/technology-stack.md`.
+
 This folder is one bot profile. To create another bot, copy this folder to
 another repository or profile folder, replace `.env.local`, update
 `standalone/bot/content.seed.json`, and put that bot's guide files under
