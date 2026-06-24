@@ -33,6 +33,31 @@
 - Do not revert user changes unless explicitly requested.
 - Treat dirty worktrees as normal.
 - If user changes affect the task, work with them.
+- Preserve recorded feature workflow contracts. If a feature has an agreed
+  runtime workflow, loading order, branching state flow, background work, or
+  user-visible guarantee, read that contract before changing the feature and
+  update it in the same scoped change when behavior intentionally changes.
+- For non-trivial features, keep the feature idea, functional description,
+  workflow contract, implementation plan, sprint breakdown, task breakdown,
+  definitions of done, and verification connected. Tasks do not replace the
+  feature contract.
+- Treat project memory as the portable product specification layer. For
+  non-trivial feature, business-rule, data-model, integration, or architecture
+  work, update the relevant project-memory specification in the same scoped
+  change. Write it so another agent could rebuild the behavior on a different
+  language, framework, or platform. A handoff summary is not a substitute.
+- Keep project documentation separate from project memory. Put overview,
+  user-visible functionality, stack, commands, operations, and troubleshooting
+  in `README.md`, `docs/`, or the runbook. Put algorithms, business rules,
+  workflow contracts, state machines, invariants, and verification guarantees in
+  project memory.
+- After any meaningful implementation, refactor, migration, or configuration
+  cleanup batch, verify that every touched layer uses the intended
+  source-of-truth for changed defaults, policies, workflows, contracts, or
+  interpretation rules. Check backend, frontend, tests, docs, generated
+  examples, build metadata, and project-memory specs as relevant; keep unrelated
+  files and generated noise out of the batch; and distinguish harmless
+  line-ending warnings from real `git diff --check` whitespace errors.
 
 ## Git
 
@@ -41,6 +66,9 @@
   git finish requests. `gi коммит` commits scoped current changes only; `gi пуш`
   and `gi коммит пуш` commit scoped current changes and push the current branch;
   `gi только пуш` pushes existing local commits without creating a new commit.
+  Do not reinterpret `gi пуш` as a raw `git push`, a retry of a previous
+  terminal push, or a push-only command; if there are no scoped changes to
+  commit, report that clearly instead of falling back to push-only behavior.
   Inspect status, keep unrelated/user changes out, follow commit-message
   preferences, and stop on ambiguous scope, missing remote, conflicts, secrets,
   or push failures.
@@ -76,10 +104,13 @@
   checklist showing `English` as always selected and current additional
   languages as checked. Explain that `English` is the required primary
   commit-message language and cannot be disabled. Ask the user to reply with
-  language names or numbers. Render each option as a task-list bullet with the
-  number inside the label, such as `- [x] 1. English`; do not use
-  `1. [x] English`, because some chat renderers split the checkbox and label
-  onto separate lines.
+  language names or numbers. Render each option as a plain inline checkbox
+  marker with the number and label on the same physical line, such as
+  `[x] 1. English` or `[ ] 2. Russian`. Do not use Markdown task-list syntax
+  such as `- [x] 1. English` or ordered-task syntax such as `1. [x] English`,
+  because some chat renderers split the checkbox control and label onto
+  separate lines. Never emit a standalone checkbox line followed by a separate
+  numbered label line.
 - When reporting this change, mention the plain
   `tools/project-memory/git-preferences.json` path instead of malformed or
   placeholder markdown links.
@@ -120,6 +151,8 @@ or:
   ask in three numbered steps. For each step, show a concise numbered Markdown
   checklist with the available languages and the current selection, then accept
   the user's next answer as numbers or language names for that step.
+- When a unified project-language step has no current selection, default it to
+  `1 2`: `English`, then `Russian`.
 - If the user replies with only numbers, such as `1 2`, map them to the most
   recent checklist and preserve that order. Do not ask what those numbers mean
   after showing the checklist.
@@ -181,9 +214,51 @@ or:
   the only short prefix; do not rename it to `GAI` or another alias.
   If a `gi` command is missing a needed parameter, ask one short clarification
   question instead of guessing.
+- Treat `gi help`, `gi хелп`, `ги help`, `ги хелп`, `gi commands`,
+  `gi команды`, and `ги команды` as informational requests for the local GI
+  command list. Show compact command names and short descriptions; do not run
+  startup restore, resume old tasks, call services, or execute the listed
+  commands.
 - Use the instruction kit as a token-economy and RAG-startup layer: restore only
   task-relevant context from local instructions, summaries, targeted searches,
   and project memory instead of broad repository reads or large outputs.
+- Use `gi sql` and `gi vector` as inspection commands for project-memory
+  retrieval metrics and activation limits. Report current counts, readiness,
+  staleness, and recommendations; do not deploy heavy databases or external
+  services by default.
+- Use `gi refactor`, `gi рефактор`, or `ги рефактор` for a full current-project
+  refactor under all applicable GI rules. Read local instructions, contracts,
+  manifests, project memory, and tests first; create a concise plan; then work
+  in small verifiable batches that preserve user-visible behavior unless the
+  user explicitly changes it. Cover architecture boundaries, configuration
+  boundaries, hard-code removal, development-tool/product separation,
+  SOLID/DRY/clean-code concerns, duplicated business logic, contracts, tests,
+  project-memory updates, and cross-layer source-of-truth consistency. Ask
+  before destructive operations, data migrations, public API or storage
+  contract changes, dependency replacements, formatting-only churn, or
+  private/external paths.
+- Use `gi rebuild` for the current project/application rebuild only, such as
+  producing an executable, package, or documented build artifact. Use
+  `gi tools rebuild` /
+  `gi rag rebuild` only for a confirmed full rebuild of the current project's
+  configured GI/RAG project-memory retrieval system. Use node forms such as
+  `gi tools rebuild sql`, `gi tools rebuild chunks`, `gi tools rebuild vector`,
+  and `gi tools rebuild evals` for scoped GI/RAG rebuilds.
+  During `gi обновить`, migrations that change RAG rules, indexers, chunking,
+  embedding metadata, or retrieval adapters must leave affected rebuild state
+  stale until the documented rebuild and status checks succeed.
+- Treat `gi prod`, `gi production`, `gi прод`, and `ги прод` as production
+  service publication requests only for online services connected to real
+  remote APIs. Normal development, refactors, tests, cleanup, formatting, and
+  `gi restart` use the development checkout/service and must not edit, reset,
+  stop, or test inside the production service folder. For `gi prod`, read the
+  project-local production contract, build or prepare the documented
+  development artifact, sync only approved files into the production folder,
+  preserve production-local secrets, config, databases, logs, caches, sessions,
+  webhook/API state, and service manager files, then restart/reload/switch over
+  and verify only through documented commands. If the production folder,
+  include/exclude rules, health check, or rollback path is missing, ask one
+  concise question instead of guessing.
 - Keep `gi` command responses scoped to the shared instruction-kit command. Do
   not resume an older product task after a `gi` command unless the user
   explicitly asks.
@@ -197,6 +272,32 @@ or:
   checking or applying instruction-kit file updates.
 - Treat `gi саммари` and `gi summary` as requests to write a handoff summary
   file under `tools/summary/`, not only as requests to summarize in chat.
+- Keep handoff summaries focused on thread substance as a thematic handoff, not
+  as a short chronological retelling. Break the thread into meaningful topic
+  sections, list the key theses under each topic, and briefly describe each
+  thesis. Add more detail only when a complex topic would lose necessary
+  context without it. Include links to code files, URLs, media, images, logs,
+  screenshots, or exact artifacts only when those references are needed to
+  understand or verify the context. For architecture or research conversations,
+  especially when the user evaluates an external project, article, pattern, or
+  tool as a possible integration target, explicitly preserve the user's
+  exploration intent and map the external concepts to current project
+  components. State whether the discussion was informational or preparation for
+  implementation, which external item was considered, which local components it
+  could affect, what a future agent must not miss, and which conclusions are
+  decisions versus hypotheses. Omit routine command bookkeeping such as
+  successful `gi push`, staging counts, git directives, branch names, push
+  targets, and commit hashes when git logs or command history can recover them.
+  Mention repository state only when it affects the next agent's action. If a
+  step-by-step protocol is needed, add a separate `Thread Timeline` section or
+  file only when the user asks or the timeline materially helps the handoff.
+- When asked where a previous thread stopped, compare the latest handoff summary
+  with the most recent visible thread conclusion or user-provided evidence.
+  Prefer the last explicit architectural/product decision, open question, or
+  agreed next direction over incidental caveats in the summary. Do not turn an
+  unverified caveat, environment variable, skipped check, or old `Next Best
+  Steps` bullet into the current task unless the user selects it or it blocks
+  the stated goal.
 - Treat `gi гит-обзор` and `gi git summary` as requests to summarize the latest
   git commit in the current project in chat. Include commit metadata, changed
   files, compact stats, inferred purpose, and notable risks or checks. Do not
@@ -205,8 +306,57 @@ or:
   test commands and produce a compact verification plan for the current feature,
   bug fix, or release check. Plan first; run checks only when the user asks or
   when the current task already requires verification.
+- Treat `gi test task`, `gi testing task`, `gi тест таск`, `ги тест таск`, and
+  equivalent wording as requests to set the active release/full-system
+  verification workload for the current project. The supplied task text is the
+  scenario for the next `gi test`, not evidence that the scenario already
+  passed.
+- Treat `gi test`, `ги тест`, `gi full test`, `gi release test`, and equivalent
+  full-project test wording as requests to run the documented verification flow
+  against the active test task. Do not confuse this with `gi test plan`, which
+  remains plan-only by default. Dry-runs, simulations, dispatcher-only runs,
+  replayed logs, mock-only checks, and compile/unit-only checks are diagnostics
+  only and must not be run during `gi test` unless the user explicitly asks for
+  that diagnostic mode; they must never be reported as a passed `gi test`.
+  Exercise the documented live runtime surface for the selected task, including
+  apps, backend/API, storage, queues/workers, UI/auth, service discovery,
+  orchestrator or agent handoff loops, and health/contract endpoints when the
+  project defines them. If the live system cannot be started or reached, report
+  `gi test` as blocked or not checked. Old summaries, screenshots, completed
+  demos, previous task statuses, and old chat snippets are evidence only; rerun
+  the current documented checks or report the exact blocker.
+- For verification plans and smoke checks, confirm exact CLI flags, ports,
+  routes, methods, JSON payload fields, and required environment variables from
+  current local instructions, manifests, config, or source code. Summaries and
+  old chat snippets are evidence, not authoritative command contracts.
+- Treat `gi install`, `gi инсталл`, `ги инсталл`, and clear typo variants as
+  build-and-installer requests. The task is complete only after the packaging
+  command runs and a current installer artifact is produced or explicitly
+  verified; restore/build/test alone are preliminary checks.
+- Treat `gi first test`, `gi первый тест`, and `ги первый тест` as first-launch
+  verification requests. Reset only documented project-owned app cache,
+  generated state, temporary first-run profiles, and rebuildable local settings;
+  do not delete user documents, production data, secrets, credentials, shared
+  system caches, sibling projects, or arbitrary user-home folders. If exact
+  reset paths or commands are missing, ask one concise question instead of
+  guessing.
+- Treat `gi default`, `gi defaults`, and `ги дефолт` as default-state reset
+  requests. Restore only documented project-owned app state, generated caches,
+  local settings, onboarding flags, temporary profiles, and other rebuildable
+  first-run/default state. Read local reset, cleanup, first-run, backup, run,
+  and test instructions before clearing anything. Do not delete source files,
+  project memory, instruction-kit files, user documents, production data,
+  secrets, credentials, shared system caches, sibling projects, or arbitrary
+  user-home folders. If reset targets are undocumented, ask one concise question;
+  if reset could be irreversible or user-owned data is involved, require
+  explicit confirmation and prefer backup or rename when local rules allow it.
 - Treat a first message that points to a shared instruction library as an
   instruction bootstrap, not as a request to add that library as a dependency.
+- Treat `init <source>`, `инит <source>`, `инициализируй <source>`, and
+  `инит правила <source>` as shared-instruction bootstrap/startup requests when
+  `<source>` points to a known `general-instructions` source. Never reinterpret
+  these forms as `git init`, folder creation, OpenCode setup, project creation,
+  `npm init`, or `python -m venv` unless the user explicitly names that action.
 - If the user asks to update from a shared instruction library and this project
   has no `tools/project-memory/instruction-kit.json`, treat that as first-time
   instruction bootstrap/init.
@@ -224,16 +374,6 @@ or:
 - Prefer patch-style edits for manual changes.
 - Avoid unrelated formatting churn.
 - Add comments only when they clarify non-obvious behavior.
-- Do not remove agent-facing RAG/startup assets such as `AGENTS.md`, `tools/`,
-  `tools/project-memory/`, `skills/`, bootstrap scripts, update scripts, deploy
-  scripts, or instruction/config files merely because they look internal.
-  Inspect their purpose first, and delete them only after explicit user
-  confirmation that they are temporary or unrelated.
-- Classify `*.sqlite`, `*.sqlite3`, and `*.db` files before deleting or
-  committing them. Keep rebuildable agent-memory indexes ignored when useful;
-  commit reviewable README files, Markdown/JSON exports, schemas, and indexing
-  scripts. Never commit databases containing secrets, private data, telemetry,
-  task-manager state, absolute local paths, or agent conversation history.
 
 ## Task Planning
 
@@ -243,18 +383,10 @@ or:
 - Include the goal, planned changes, execution order, risks or dependencies, and
   verification steps.
 - Update progress as meaningful steps complete.
+- Update feature/business/architecture specifications as meaningful behavior
+  changes are completed.
 - Keep plans concise. Do not store full diffs, large logs, generated outputs,
   secrets, credentials, or private production data.
-- For non-trivial features, keep a durable project-local feature document with
-  the feature idea, functional description, workflow contract, implementation
-  plan, sprint breakdown, tasks, definitions of done, and verification.
-- Treat feature contracts as behavior guarantees. Before changing a feature with
-  a recorded contract, read the contract and preserve the agreed sequence,
-  branches, blocking/background work, loading/empty/error states,
-  cancellation/retry behavior, data freshness, observability, and verification
-  unless the user explicitly changes the agreement.
-- Sprint and task lists do not replace the feature workflow contract: tasks say
-  what to change, while the contract says what behavior must remain true.
 
 ## Shared Instruction Updates
 
@@ -283,13 +415,6 @@ or:
   do not store, guess, or copy API endpoints from old notes or other projects.
 - If a configured manager id is missing from config-service, stop with a concise
   blocker instead of falling back to port scans or stale task-manager memory.
-- Treat `gi manager`, `gi tm`, `gi manager test`, `gi менеджер`, and
-  `ги манагер` as task-manager inspection commands. Read the enabled manager id
-  or `service_id` from project-local task-manager config, resolve it through
-  `GET /services/{serviceId}`, read `endpoints.guide` when present, read
-  `endpoints.contract`, and use `endpoints.api` only for documented manager
-  operations. Ignore legacy `base_url` values unless a local migration rule
-  explicitly converts them into config-service records.
 - Before posting plans or starting sprint work, read the manager guide when
   present, then verify the workflow-specific manager contract and capabilities,
   not only generic health.
