@@ -378,9 +378,16 @@ export function App() {
     <main className="app-shell">
       <section className="workspace">
         <header className="topbar">
-          <div>
+          <div className="brand-lockup">
             <p className="eyebrow">Aroma guide bot</p>
             <h1>{activeTab === "stats" ? "Статистика бота" : activeTab === "users" ? "Пользователи" : "Контент бота"}</h1>
+            <p className="topbar-subtitle">
+              {activeTab === "stats"
+                ? "Ключевые события, ошибки и воронка выдачи материалов."
+                : activeTab === "users"
+                  ? "Доступы команды и безопасность админ-панели."
+                  : "Сообщения, медиа и материалы, которые видят подписчики."}
+            </p>
           </div>
           <div className="topbar-actions">
             <span className="status">{currentUser ? `${currentUser.username} · ${currentUser.role}` : isSyncing ? "syncing" : "ready"}</span>
@@ -448,6 +455,24 @@ export function App() {
           />
         ) : (
           <form className="admin-layout" onSubmit={(event) => void handleSave(event)}>
+            <div className="content-overview" aria-label="Сводка контента">
+              <div>
+                <span>Материалы</span>
+                <strong>{draft.guides.length}</strong>
+              </div>
+              <div>
+                <span>Сообщения</span>
+                <strong>{messageFields.length}</strong>
+              </div>
+              <div>
+                <span>Медиа</span>
+                <strong>{Object.values(draft.media).filter(Boolean).length + (draft.selectionPhotoPath ? 1 : 0)}</strong>
+              </div>
+              <div>
+                <span>Канал</span>
+                <strong>{draft.requiredChannelUrl ? "OK" : "Нет"}</strong>
+              </div>
+            </div>
             <section className="editor-section">
               <div className="section-heading">
                 <h2>Сообщения</h2>
