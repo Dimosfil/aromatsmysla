@@ -13,9 +13,16 @@ current project's `AGENTS.md` loading contract and the routed
 `patterns/AGENTS_RUNTIME/` module for that command. If the routed module is
 missing, stop and report the missing path instead of acting from memory.
 
-For `gi restart`, `gi reboot`, `ги рестарт`, `ги ребут`, and equivalent aliases,
-read `patterns/AGENTS_RUNTIME/09-project-operation-commands.md` before any
-process inspection, stop, start, or success report.
+For `gi restart`, `gi reboot`, `gi docker`, `ги рестарт`, `ги ребут`,
+`ги докер`, and equivalent aliases, read
+`patterns/AGENTS_RUNTIME/09-project-operation-commands.md` before any process
+inspection, Docker build, stop, start, or success report.
+
+Before any `gi` command writes files, agents must verify that the active project
+root and target identity match the current request. If the request appears to
+target another product, repository, or absolute path outside the current root,
+stop and warn the user unless the current message explicitly authorizes that
+exact external path and action.
 
 ## Команды Для Чата С Агентом
 
@@ -108,6 +115,7 @@ gi ftp
 ги конфиг сервис off
 gi reboot
 gi restart
+gi docker
 gi first test
 gi default
 gi defaults
@@ -116,8 +124,13 @@ gi первый тест
 ги первый тест
 ги ребут
 ги рестарт
+ги докер
 ги конфиг сервис урл=http://127.0.0.1:4100
 gi install
+gi local sprint
+gi sprint local
+gi локальный спринт
+gi спринт локально
 gi инсталл
 ги инсталл
 gi старт спринт
@@ -192,9 +205,10 @@ the listed commands.
 | `gi config service on`, `gi config service off` | Toggle current app self-registration with config-service. |
 | `gi prod`, `gi production`, `gi прод`, `ги прод` | Publish the current development version into the documented production service folder for a live online service. |
 | `gi reboot`, `gi restart`, `ги ребут`, `ги рестарт` | Start or restart all documented project apps using local run instructions. |
+| `gi docker`, `ги докер` | Restart the current project's documented Docker/Compose runtime, rebuilding first when local Docker state requires it. |
 | `gi first test`, `gi первый тест` | Reset documented first-run state and verify first-launch experience. |
 | `gi default`, `gi defaults`, `ги дефолт` | Restore the current project to documented first-run/default state. |
-| `gi install`, `gi инсталл`, `ги инсталл` | Build/package the current project and verify an installer artifact. |
+| `gi install`, `gi инсталл`, `ги инсталл` | Build/package the current project and verify an installer artifact; default target is Windows unless another platform is named. |
 | `gi ftp config`, `gi ftp service`, `gi ftp folder` | Inspect or configure FTP/SFTP deployment settings without uploading. |
 | `gi ftp`, `gi ftp push`, `gi deploy ftp`, `gi upload ftp` | Upload configured build output to the configured FTP/SFTP target. |
 | `gi tm`, `gi manager` | Inspect the configured task manager through config-service. |
@@ -203,6 +217,7 @@ the listed commands.
 | `gi add sprint`, `gi create sprint`, `gi добавить спринт` | Create a visible Sprint/Cycle through the configured task manager. |
 | `gi plan`, `gi план`, `gi post plan` | Send the current plan to the configured task manager. |
 | `gi start sprint`, `gi старт спринт` | Take the active Sprint/Cycle into work through the configured task manager. |
+| `gi local sprint`, `gi sprint local`, `gi локальный спринт`, `gi спринт локально` | Run a local sprint checklist without task manager or config-service sync. |
 | `gi test plan`, `gi тест-план` | Build a verification plan from current project contracts. |
 | `gi test task`, `ги тест таск` | Set the active release/full-system verification task for the current project. |
 | `gi test`, `ги тест` | Run the documented full project verification flow against the active test task. |
@@ -410,6 +425,41 @@ one short clarification question instead of inventing a command. Use
 `gi tools rebuild` or `gi rag rebuild` when the GI/RAG layer itself must be
 rebuilt.
 
+### Docker Runtime
+
+```text
+gi docker
+ги докер
+```
+
+`gi docker` asks the agent to restart the current project's documented
+Docker/Compose runtime and decide whether a rebuild is needed before restart.
+The agent first reads project-local run/deploy instructions, Dockerfile or
+Containerfile, `compose.yaml`, `compose.yml`, `docker-compose*.yml`, container
+scripts, manifests, service records, and project memory that define Docker
+ownership and health checks.
+
+If the project has no Docker/Compose config and no documented Docker run
+contract, the agent reports that Docker is not configured for this project and
+does not invent a container command. If Docker CLI, Docker Compose, or the
+Docker engine is unavailable or not running, the agent reports that blocker
+instead of treating the restart as complete.
+
+The agent rebuilds before restart when the image is missing, the local Docker
+contract says to rebuild, Dockerfile/Compose/build-context/dependency manifests
+changed since the known running image, or the agent cannot confidently prove
+that the current image matches the working tree. Prefer the project-documented
+command when present; otherwise use the narrow Compose command for the project
+such as `docker compose up -d --build`, letting Docker's cache no-op unchanged
+layers. When the image is current and containers only need a restart, use the
+documented restart/up command without a rebuild.
+
+The command is scoped to the current project only. Do not prune Docker system
+state, remove volumes, delete images, or stop unrelated containers. After the
+operation, verify documented container status, health checks, mapped service
+URLs, and recent logs when failures appear, then report rebuilt/restarted/not
+configured/blocked status with evidence.
+
 ### Rebuild GI/RAG Tools
 
 ```text
@@ -554,8 +604,11 @@ gi defaults
 The agent restores the current project to its documented first-run/default
 state. This is broader than `gi first test`: it may clear project-owned app
 state, generated caches, local settings, onboarding flags, temporary profiles,
-and other rebuildable state that local instructions explicitly define as safe to
-reset.
+runtime logs, queues, worker state, generated test databases, browser storage
+for the app origin, and other rebuildable state that local instructions
+explicitly define as safe to reset. Preserve only exclusions explicitly
+documented by the current project; old chat, screenshots, previous run
+artifacts, and browser state do not create reset exceptions.
 
 Before clearing anything, the agent reads project-local reset, cleanup,
 first-run, run, backup, and test instructions. If the project provides a reset
@@ -583,16 +636,35 @@ gi инсталл
 gi install Inno Setup
 gi инсталл Inno Setup
 gi инсталл <программа>
+gi install macOS
+gi install Android
 ```
 
 Также распознавать очевидные опечатки вроде `gi иснтлл`, если намерение
 собрать installer ясно из контекста.
 
 Агент собирает production build и установочный файл для текущего проекта.
-Если программа не указана, по умолчанию использовать Inno Setup: найти
-project-local build/package инструкции, скрипты и `.iss` файл, затем собрать
-приложение и installer. Если после команды указана программа, использовать её
-как предпочитаемый packaging/installer tool вместо Inno Setup.
+Если целевая платформа не указана, по умолчанию собирать Windows installer.
+Для Windows, если программа не указана, по умолчанию использовать Inno Setup:
+найти project-local build/package инструкции, скрипты и `.iss` файл, затем
+собрать приложение и installer. Если после команды указана программа,
+использовать её как предпочитаемый packaging/installer tool вместо Inno Setup.
+Если пользователь явно называет macOS, iOS, Android, Linux или другую
+платформу, либо такая платформа задана project-local packaging contract,
+следовать соответствующему локальному контракту сборки/подписи/пакетирования.
+Если указанная платформа поддерживается проектом, но нужный packaging contract
+не найден или неоднозначен, задать один короткий уточняющий вопрос вместо
+переключения на Windows по умолчанию.
+
+Для каждой целевой платформы держать отдельную project-local папку. В ней
+должны лежать или быть явно связаны инструкции сборки, packaging configs,
+signing/notarization/provisioning notes, verification notes и текущие installer
+artifacts для этой платформы. Если проект уже задаёт свой layout, следовать
+ему; если агент создаёт или исправляет packaging layout, использовать
+платформенные подпапки вроде `packaging/windows/`, `packaging/macos/`,
+`packaging/ios/`, `packaging/android/`, `packaging/linux/` или эквивалентные
+project-local имена. Не смешивать artifacts разных платформ в одной общей
+папке без per-platform manifest.
 
 Перед packaging агент определяет версию приложения из project-local metadata:
 manifests, package files, assembly attributes, release files или installer
@@ -629,6 +701,27 @@ supports active sprint lookup, next-task lookup, and task completion for the
 selected workflow. If only generic health works, stop before executing tasks.
 This command is more specific than plain `gi start`; do not answer it with only
 generic startup restore when a configured task-manager workflow is available.
+
+### Run Local Sprint Checklist
+
+```text
+gi local sprint
+gi sprint local
+gi локальный спринт
+gi спринт локально
+```
+
+Use this when the user wants sprint-shaped work without a configured task
+manager or config-service. The agent uses sprint content from the current
+message, current chat context, or a project-local checklist file explicitly
+named by local instructions. If no sprint content is available, ask one short
+question for the sprint goal and task list.
+
+This command is not a task-manager workflow. Do not resolve config-service,
+create raw manager intake, edit task-manager internals, or claim that a visible
+Sprint/Cycle was created, started, completed, or synchronized. If the user asks
+for `gi start sprint` and the manager/config-service setup is missing, report
+that blocker and mention `gi local sprint` as the explicit local alternative.
 
 ### Проверить Обновления Инструкций
 
@@ -883,6 +976,18 @@ while `gi test` runs. Before running, the agent rereads current local
 instructions, README, manifests, runbooks, test configs, and source entry
 points needed to verify exact commands, services, app set, ports, routes,
 payloads, environment, storage, auth, queues, workers, and health checks.
+Before the live checks, the agent must reset project-owned runtime state to the
+documented default/factory baseline, preserving only exclusions explicitly
+documented by the current project. Browser storage, generated databases, logs,
+queues, temporary workers, app caches, and similar rebuildable state are cleared
+unless the project-local reset contract lists them as exceptions. If reset
+targets or safe exceptions are undocumented, report that blocker instead of
+running a dirty-state test.
+
+After reset, selected chain/preset/execution mode, ports, task, and service
+endpoints must be read from the project-local source of truth such as config
+files, backend state, service discovery, or database metadata. Browser
+`localStorage` is only UI cache; it cannot be the source of truth for `gi test`.
 
 For `gi test`, dry-run mode is not a valid result. Do not report `--dry-run`,
 simulation mode, dispatcher-only execution, replayed logs, mock-only runs, or
@@ -918,7 +1023,10 @@ code, duplicated business logic, oversized modules, dependency direction, typed
 or validated contracts, tests, and project-memory updates.
 
 The agent works in small verifiable batches and preserves user-visible behavior
-unless the user explicitly changes it. It asks before destructive operations,
+unless the user explicitly changes it. It separates structural refactor work
+from development work such as new behavior, validation, observability,
+integrations, runtime flows, or new public contracts; verification and service
+operations stay labeled separately too. It asks before destructive operations,
 data migrations, public API or storage contract changes, dependency
 replacements, broad formatting-only churn, or private/external paths. After
 meaningful batches, it runs documented checks for affected areas, updates
@@ -1149,6 +1257,17 @@ instructions and
 then uploads to `remotePath`. If the config is missing, use the redacted
 template shape from `templates/ftp.local.template.json` or
 `tools/deploy/ftp.local.example.json` and ask only for missing required values.
+Treat upload stalls, hangs, repeated timeouts, and failed stream opens as failed
+FTP/FTPS transfers. If FTP/FTPS connects but upload fails or is unreliable,
+immediately inspect the service contract, project-local config, and current
+user-provided details for an authorized SFTP-over-SSH route to the same remote
+deploy folder. When the needed SSH host, port, user, and credential reference
+are available, switch to SFTP before more FTP/FTPS upload variants and report
+that fallback. If they are missing, report the exact missing SFTP details
+instead of inventing credentials or retrying the same failing FTP path. Do not
+disable TLS certificate validation or accept invalid FTPS certificates as a
+routine fallback unless the deploy contract or current user message explicitly
+authorizes that degraded security path.
 Do not print secrets or full credential-bearing commands.
 
 `gi config service on` / `gi config service off` sets the current application's
@@ -1157,7 +1276,14 @@ local config area as its config-service URL. `on` is for web-facing apps that
 expose a port, HTTP API, web UI, task-manager service, or local daemon endpoint:
 on startup they must contact config-service and read their own `service_id`
 startup/service record before binding any port. The port to bind and neighboring
-service endpoints come from config-service. If config-service is missing,
+service endpoints come from config-service. If the recorded port is already
+occupied, the app or agent must verify whether the owner is the same documented
+service instance. A same-service owner may be reused or restarted only through
+the local run contract. A different, unknown, or unverifiable owner is a
+port-conflict blocker: do not stop it without explicit approval, do not rewrite
+the service record, and do not bind a neighboring fallback port. Changing ports
+changes browser origin and can make browser-owned state such as localStorage,
+cookies, and IndexedDB appear missing. If config-service is missing,
 unreachable, has no record for the app, or returns incomplete startup config,
 startup reports the blocker and waits for config-service to be configured,
 repaired, or started; it does not guess, scan, or use stale fallback ports.
@@ -1176,9 +1302,12 @@ records, desktop packaging metadata, or project memory; do not assume a
 successful web/API start covers the project. For local web/API services,
 resolve the service id, port, URL, and neighboring endpoints through
 config-service before running a start command; fixed ports in local runbooks or
-examples do not authorize a fallback bind. If a config-service record is
-missing, use only the documented config-service registration workflow to create
-or update it before startup, or stop with the exact missing contract. If local
+examples do not authorize a fallback bind. If the resolved port is occupied,
+verify whether the owner is the same documented service; otherwise report a
+port-conflict blocker and do not move the app to another port. If a
+config-service record is missing, use only the documented config-service
+registration workflow to create or update it before startup, or stop with the
+exact missing contract. If local
 instructions define a preferred start/restart command that launches the full
 app set, use it only with the config-service-resolved local runtime values for
 web/API apps. Otherwise enumerate every documented app or runtime, such as
@@ -1196,6 +1325,22 @@ report that as a blocker or partial failure instead of success. Published
 hosting environments follow their hosting or production deploy contract and are
 not restarted by local `gi reboot` unless project-local production instructions
 explicitly define that behavior.
+
+`gi docker` / `ги докер` restarts the current project's documented Docker or
+Docker Compose runtime. The agent first reads project-local Docker/run
+instructions, compose files, Dockerfile or Containerfile, scripts, manifests,
+service records, and health-check contracts. If no Docker/Compose config or
+documented Docker run contract exists, report that Docker is not configured for
+this project and stop. If Docker CLI, Docker Compose, or the Docker engine is
+missing or unavailable, report that blocker. Rebuild before restart when the
+image is missing, local Docker/build inputs changed, the local contract requires
+it, or freshness cannot be proven; otherwise restart/up the existing current
+image. Prefer documented commands; without one, use the narrow project Compose
+command such as `docker compose up -d --build` when rebuilding is needed, or
+`docker compose up -d` / documented restart when it is not. Do not prune Docker
+state, remove volumes/images, or stop unrelated containers. Verify container
+status, health checks, mapped URLs, and relevant recent logs before reporting
+rebuilt/restarted/not-configured/blocked status.
 
 `gi first test` / `gi первый тест` / `ги первый тест` resets only documented
 project-owned application cache, generated state, temporary first-run profiles,

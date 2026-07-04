@@ -38,9 +38,10 @@ implemented against each goal criterion and list remaining gaps as blockers.
   test, install, reset, update, commit, push, or manage task-manager state, do
   not execute from memory, old chat examples, or a command name alone. If the
   command's routed module is unavailable, stop and report the missing path.
-- For `gi restart`, `gi reboot`, `ги рестарт`, `ги ребут`, and equivalent
-  aliases, `patterns/AGENTS_RUNTIME/09-project-operation-commands.md` is
-  mandatory context before any process inspection, stop, start, or success
+- For `gi restart`, `gi reboot`, `gi docker`, `ги рестарт`, `ги ребут`,
+  `ги докер`, and equivalent aliases,
+  `patterns/AGENTS_RUNTIME/09-project-operation-commands.md` is mandatory
+  context before any process inspection, Docker build, stop, start, or success
   report.
 - For broad or unclear work, read `patterns/AGENTS_RUNTIME/01-purpose.md`,
   `patterns/AGENTS_RUNTIME/03-rule-precedence.md`,
@@ -49,6 +50,11 @@ implemented against each goal criterion and list remaining gaps as blockers.
 - If a task crosses topics, read every matching module before acting.
 - Prefer project-local instructions, runbooks, contracts, project memory, and
   service guides over shared defaults when they are more specific.
+- Before filesystem writes, verify the active project root and target identity
+  from local instructions, README, manifests, git remote, service id, or project
+  memory. If the task appears to target a different product, repository, or
+  absolute path outside the current root, stop and warn the user unless the
+  current message explicitly authorizes that exact external path and action.
 
 ## Restore Context
 
@@ -88,12 +94,12 @@ Use the RAG startup flow and retrieve only task-relevant context.
 - Startup, restore, project goal, bug evidence, PDF inspection, repository
   cleanup, filesystem boundaries, and first-message handling:
   `patterns/AGENTS_RUNTIME/07-startup-and-scope.md`
-- Config-service, service guide/contract lookup, task manager commands, sprint
-  commands, and web-service port registration:
+- Config-service, service guide/contract lookup, task manager commands,
+  manager-backed and local sprint commands, and web-service port registration:
   `patterns/AGENTS_RUNTIME/08-config-service-and-task-manager.md`
-- Dev/prod online service publication, FTP deploy, restart/reboot, first test,
-  full test, default reset, installer packaging, SQL/vector inspection, and
-  project/RAG rebuild commands:
+- Dev/prod online service publication, FTP deploy, restart/reboot,
+  Docker/Compose restart, first test, full test, default reset, installer
+  packaging, SQL/vector inspection, and project/RAG rebuild commands:
   `patterns/AGENTS_RUNTIME/09-project-operation-commands.md`
 - Nested repositories, private local app data, product-plan intent signals, and
   missing required entities:
