@@ -1,66 +1,160 @@
 # Feature Workflow Contract
 
-Use this template for non-trivial features whose user-visible behavior must
-survive implementation changes, sprint handoffs, or task-manager updates.
+Feature: TODO
+Owner or source of agreement: TODO
+Last updated: TODO
+
+Portability goal: this document describes behavior independently from the
+current language, framework, platform, or UI toolkit.
 
 ## Feature Idea
 
-- Problem:
-- Audience:
-- Desired outcome:
+TODO
+
+## User Problem
+
+TODO
+
+## Goal
+
+TODO
 
 ## Functional Description
 
-- Entry points:
-- Primary actions:
-- Data used:
-- External dependencies:
+TODO
 
-## Workflow Contract
+## Business Rules And Invariants
 
-- Required order:
-- Branches and alternate paths:
-- Blocking work:
-- Background work:
-- Loading states:
-- Empty states:
-- Error states:
-- Cancellation behavior:
-- Retry behavior:
-- Data freshness:
-- Observability:
-- Terminal outcomes:
+- TODO
+
+## Actors, Roles, And Permissions
+
+- TODO
+
+## Non-Goals
+
+- TODO
+
+## User-Visible Promise
+
+TODO
+
+## Entry Points
+
+- TODO
+
+## Preconditions
+
+- TODO
+
+## Workflow
+
+```mermaid
+flowchart TD
+    start["Start"] --> step1["TODO"]
+    step1 --> decision{"TODO decision?"}
+    decision -->|Yes| yesPath["TODO"]
+    decision -->|No| noPath["TODO"]
+    yesPath --> done["Done"]
+    noPath --> done
+```
+
+## Required Order
+
+1. TODO
+2. TODO
+3. TODO
+
+## Branches And States
+
+- TODO
+
+## Blocking And Background Work
+
+- Blocks user interaction: TODO
+- Must not block user interaction: TODO
+- Background work: TODO
+
+## Loading And Empty States
+
+- TODO
+
+## Failure, Retry, And Cancellation
+
+- TODO
+
+## Data And Freshness Rules
+
+- TODO
+
+## Inputs, Outputs, And Validation
+
+- Inputs: TODO
+- Outputs: TODO
+- Validation: TODO
+
+## Observability
+
+- User-visible errors: TODO
+- Logs or metrics: TODO
 
 ## Implementation Plan
 
-- Modules or surfaces:
-- Data model changes:
-- API or bot behavior changes:
-- Configuration changes:
-- Migration or compatibility notes:
+Technical approach: TODO
+
+Likely affected areas:
+
+- TODO
+
+Dependencies and risks:
+
+- TODO
+
+Rollout or fallback:
+
+- TODO
+
+## Current Implementation Map
+
+Current files, routes, commands, schemas, services, or assets that implement the
+behavior:
+
+- TODO
+
+Implementation notes that are not part of the portable behavior contract:
+
+- TODO
 
 ## Sprint Breakdown
 
-### Sprint 1
+### Sprint 1: TODO
 
-- Goal:
-- Scope:
-- Dependencies:
-- Exit criteria:
-- Verification:
+Goal: TODO
 
-## Tasks
+Scope:
 
-### Task 1
+- TODO
 
-- Description:
-- Traces to:
-- Definition of Done:
-- Verification:
+Tasks:
+
+- [ ] TODO
+
+Exit criteria:
+
+- TODO
+
+Verification:
+
+- TODO
 
 ## Verification
 
-- Unit checks:
-- Integration checks:
-- Manual checks:
-- Regression risks:
+- Happy path: TODO
+- Branches: TODO
+- Slow or failed dependencies: TODO
+- Ordering guarantees: TODO
+- Regression areas: TODO
+
+## Open Questions
+
+- TODO

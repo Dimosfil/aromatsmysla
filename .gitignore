@@ -21,3 +21,5 @@ tools/project-memory/*.db
 tools/project-memory/*.db-*
 tools/summary/*.tmp
 tools/deploy/ftp.local.json
+tools/deploy/deploy-gateway.local.json
+tools/project-memory/devops.local.json

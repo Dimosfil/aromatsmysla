@@ -30,11 +30,22 @@ implemented against each goal criterion and list remaining gaps as blockers.
 - Read only the modules needed for the current request.
 - Before acting on a concrete task, select and read the matching module(s);
   this entrypoint alone is enough only for greetings or status-neutral replies.
+- Treat user wording such as "do by GI", "follow GI", "strictly by GI", and
+  equivalent local-language forms as a request for strict compliance with all
+  loaded GI rules. If an applicable rule cannot be followed, stop and report the
+  concrete blocker or explicit deferral instead of silently continuing.
+- On the first concrete task in a new chat/session, before task-specific work,
+  run a quiet GI update check: read local instruction-kit metadata and accepted
+  source `VERSION.md`/`migrations/`, apply pending accepted migrations when the
+  project update contract allows it, and report only a compact result or
+  blocker. The compact result must explicitly include the pending migration
+  count, including `0` when no migrations are pending. Do not read `updates/`
+  for this startup check.
 - If the request contains a GI chat command such as `gi ...`, `ги ...`, or a
   known mojibake form such as `РіРё ...`, treat it as a concrete task even when
   the message is short. First read `COMMANDS.md` when present, then read every
   runtime module routed to that command before acting.
-- For state-changing GI commands that start, stop, restart, rebuild, deploy,
+- For state-changing GI commands that start, stop, restart, build, rebuild, deploy,
   test, install, reset, update, commit, push, or manage task-manager state, do
   not execute from memory, old chat examples, or a command name alone. If the
   command's routed module is unavailable, stop and report the missing path.
@@ -55,6 +66,16 @@ implemented against each goal criterion and list remaining gaps as blockers.
   memory. If the task appears to target a different product, repository, or
   absolute path outside the current root, stop and warn the user unless the
   current message explicitly authorizes that exact external path and action.
+- Keep `tools/` for durable development and agent tooling only. Before writing
+  under `tools/`, classify the file. Allow scripts, adapters, bootstrap
+  commands, deploy/test helpers, agent-memory tooling, and small redacted
+  manifests. Do not put product runtime/source packages, product plugin
+  implementations, product tests, full product documentation, generated product
+  outputs, selected-run artifacts, screenshots, raw exports, build bundles,
+  downloaded datasets, or one-off work results there. `tools/project-memory/`
+  may hold compact implementation-driving specifications and evidence
+  references, but it is not a replacement for source, test, docs, artifact,
+  output, data, build, release, or product package directories.
 
 ## Restore Context
 
@@ -89,7 +110,7 @@ Use the RAG startup flow and retrieve only task-relevant context.
   `patterns/AGENTS_RUNTIME/04-content-and-authoring.md`
 - Windows shell and networking policy: `patterns/AGENTS_RUNTIME/05-windows-command-policy.md`
 - Token economy, verification command lookup, `gi info`, `gi stack`,
-  `gi refactor`, feature contracts, and large-output handling:
+  `gi logic`, `gi refactor`, feature contracts, and large-output handling:
   `patterns/AGENTS_RUNTIME/06-tool-usage-and-token-economy.md`
 - Startup, restore, project goal, bug evidence, PDF inspection, repository
   cleanup, filesystem boundaries, and first-message handling:
@@ -97,11 +118,13 @@ Use the RAG startup flow and retrieve only task-relevant context.
 - Config-service, service guide/contract lookup, task manager commands,
   manager-backed and local sprint commands, and web-service port registration:
   `patterns/AGENTS_RUNTIME/08-config-service-and-task-manager.md`
-- Dev/prod online service publication, FTP deploy, restart/reboot,
+- Dev/prod online service publication, FTP deploy, project build/rebuild,
+  restart/reboot,
   Docker/Compose restart, first test, full test, default reset, installer
   packaging, SQL/vector inspection, and project/RAG rebuild commands:
   `patterns/AGENTS_RUNTIME/09-project-operation-commands.md`
-- Nested repositories, private local app data, product-plan intent signals, and
+- Nested repositories, private local app data, `gi logic` external sources,
+  product-plan intent signals, and
   missing required entities:
   `patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md`
 - Project, commit, task, and response language preferences:
@@ -112,6 +135,11 @@ Use the RAG startup flow and retrieve only task-relevant context.
 - Update intake and `updates/` handling: `patterns/AGENTS_RUNTIME/14-update-intake.md`
 - Verification policy: `patterns/AGENTS_RUNTIME/15-verification.md`
 - Git policy: `patterns/AGENTS_RUNTIME/16-git-policy.md`
+- Agent role office, specialist role routing, and narrow professional scopes:
+  `patterns/AGENTS_RUNTIME/17-agent-role-office.md`
+- Startup product engineering, business-first delivery, .NET/frontend
+  expectations, and professional communication:
+  `patterns/AGENTS_RUNTIME/18-startup-product-engineering.md`
 
 ## Durable Memory
 
