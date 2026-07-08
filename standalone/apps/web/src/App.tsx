@@ -239,6 +239,13 @@ export function App() {
       return;
     }
 
+    const localPathWarnings = findLocalWorkstationFilePathWarnings(draft);
+    if (localPathWarnings.length > 0) {
+      setSaveState("error");
+      setSaveStatus(`Сначала загрузите файл через кнопку выбора: ${localPathWarnings.join(", ")}`);
+      return;
+    }
+
     setSaveState("saving");
     setSaveStatus("Сохраняю...");
     try {
@@ -1099,6 +1106,37 @@ function createEmptyGuide(): GuideBotAdminGuide {
     telegramMessageLink: "",
     buttonPrefix: ""
   };
+}
+
+function findLocalWorkstationFilePathWarnings(content: GuideBotAdminContent): string[] {
+  const warnings: string[] = [];
+  if (isLocalWorkstationPath(content.selectionPhotoPath)) {
+    warnings.push("фото экрана выбора подарка");
+  }
+
+  for (const [key, value] of Object.entries(content.media)) {
+    if (isLocalWorkstationPath(value)) {
+      warnings.push(`медиа ${key}`);
+    }
+  }
+
+  content.guides.forEach((guide, index) => {
+    const hasTelegramFallback = Boolean(guide.telegramFileId?.trim() || guide.telegramMessageLink?.trim());
+    if (isLocalWorkstationPath(guide.filePath) && !hasTelegramFallback) {
+      warnings.push(guide.title.trim() || `материал ${index + 1}`);
+    }
+  });
+
+  return warnings;
+}
+
+function isLocalWorkstationPath(filePath: string | undefined): boolean {
+  const normalized = filePath?.trim();
+  if (!normalized) {
+    return false;
+  }
+
+  return /^[a-zA-Z]:[\\/]/.test(normalized) || /^\\\\/.test(normalized) || /^\/(?:Users|home)\//.test(normalized);
 }
 
 function createAuthHeaders(token: string): Record<string, string> {

@@ -265,6 +265,7 @@ async function testTelegramFilePathFallback() {
   try {
     process.chdir(runtimeDir);
     assert.equal(resolveTelegramFilePath("guides/customer-guide.pdf"), guidePath);
+    assert.equal(resolveTelegramFilePath("C:\\Users\\Elena\\Desktop\\customer-guide.pdf"), guidePath);
   } finally {
     process.chdir(originalCwd);
     rmSync(rootDir, { recursive: true, force: true });
@@ -840,6 +841,119 @@ async function testGuideBotTelegramMessageLinkWorkflow() {
   }
 }
 
+async function testTelegramMessageLinkFallsBackToFileId() {
+  let updatesSent = false;
+  const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
+  const telegramFetch: typeof fetch = async (url, init) => {
+    fetchCalls.push({
+      url: String(url),
+      init
+    });
+
+    const endpoint = String(url).split("/").pop();
+    if (endpoint === "getUpdates") {
+      if (updatesSent) {
+        return new Response(JSON.stringify({ ok: true, result: [] }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        });
+      }
+
+      updatesSent = true;
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            {
+              update_id: 1,
+              callback_query: {
+                id: "callback-1",
+                data: "guide:tg",
+                from: {
+                  id: 42,
+                  username: "reader"
+                },
+                message: {
+                  chat: {
+                    id: "guide-chat"
+                  }
+                }
+              }
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    }
+
+    if (endpoint === "getChatMember") {
+      return new Response(JSON.stringify({ ok: true, result: { status: "member" } }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+    }
+
+    if (endpoint === "answerCallbackQuery" || endpoint === "sendMessage" || endpoint === "sendDocument") {
+      return new Response(JSON.stringify({ ok: true, result: {} }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+    }
+
+    if (endpoint === "copyMessage") {
+      return new Response(JSON.stringify({ ok: false, description: "Bad Request: message to copy not found" }), {
+        status: 400,
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+    }
+
+    throw new Error(`Unexpected Telegram endpoint: ${endpoint}`);
+  };
+
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        TELEGRAM_BOT_TOKEN: validToken,
+        TELEGRAM_POLLING_ENABLED: "true",
+        GUIDE_BOT_REQUIRED_CHANNEL_ID: "@demo_channel",
+        GUIDE_BOT_GUIDE_1_ID: "tg",
+        GUIDE_BOT_GUIDE_1_TITLE: "Telegram channel guide",
+        GUIDE_BOT_GUIDE_1_TELEGRAM_MESSAGE_LINK: "https://t.me/aromatsmysla/123",
+        GUIDE_BOT_GUIDE_1_TELEGRAM_FILE_ID: "telegram-file-id"
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: `data/test-guide-bot-link-fallback-${process.pid}-${Date.now()}.sqlite3`,
+    telegramFetch,
+    telegramPollIntervalMs: 25,
+    telegramRetryDelayMs: 1
+  });
+
+  try {
+    await waitFor(() => fetchCalls.some((call) => call.url.endsWith("/sendDocument")));
+    const copyMessage = fetchCalls.find((call) => call.url.endsWith("/copyMessage"));
+    const sendDocument = fetchCalls.find((call) => call.url.endsWith("/sendDocument"));
+    assert.ok(copyMessage, "Expected Telegram copyMessage to be attempted first.");
+    assert.ok(sendDocument, "Expected Telegram file_id fallback to send a document.");
+    assert.match(String(sendDocument.init?.body), /telegram-file-id/);
+  } finally {
+    await server.close();
+  }
+}
+
 async function testGuideBotSubscriptionCheckFailure() {
   const telegramFetch: typeof fetch = async (url) => {
     assert.ok(String(url).endsWith("/getChatMember"));
@@ -917,6 +1031,7 @@ await testLeadCaptureWorkflow();
 await testTelegramDiagnosticsRoute();
 await testGuideBotWorkflow();
 await testGuideBotTelegramMessageLinkWorkflow();
+await testTelegramMessageLinkFallsBackToFileId();
 await testGuideBotSubscriptionCheckFailure();
 
 console.log("Telegram gateway focused tests passed");

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { basename, relative, resolve, sep } from "node:path";
+import { basename, relative, resolve, sep, win32 } from "node:path";
 import type { BotBusinessResponse, TelegramInboundMessage, TelegramBotConfigStatus } from "@telegram-bot-template/shared";
 import { isValidTelegramToken, maskTelegramToken } from "./config";
 
@@ -188,19 +188,7 @@ export class TelegramPollingGateway {
       await this.sendMessage(response);
     }
 
-    if (response.documentTelegramMessageLink) {
-      await this.copyDocumentMessage(response.chatId, response.documentTelegramMessageLink);
-      return;
-    }
-
-    if (response.documentTelegramFileId) {
-      await this.sendDocumentFileId(response.chatId, response.documentTelegramFileId);
-      return;
-    }
-
-    if (response.documentPath) {
-      await this.sendDocumentPath(response.chatId, response.documentPath);
-    }
+    await this.sendDocument(response);
   }
 
   private async sendMessage(response: BotBusinessResponse): Promise<void> {
@@ -236,6 +224,41 @@ export class TelegramPollingGateway {
     formData.append("document", new Blob([readFileSync(resolvedDocumentPath)]), basename(resolvedDocumentPath));
 
     await this.callTelegramForm("sendDocument", formData);
+  }
+
+  private async sendDocument(response: BotBusinessResponse): Promise<void> {
+    const errors: string[] = [];
+
+    if (response.documentTelegramMessageLink) {
+      try {
+        await this.copyDocumentMessage(response.chatId, response.documentTelegramMessageLink);
+        return;
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    if (response.documentTelegramFileId) {
+      try {
+        await this.sendDocumentFileId(response.chatId, response.documentTelegramFileId);
+        return;
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    if (response.documentPath) {
+      try {
+        await this.sendDocumentPath(response.chatId, response.documentPath);
+        return;
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new Error(`Telegram document delivery failed: ${errors.join("; ")}`);
+    }
   }
 
   private async sendDocumentFileId(chatId: string, fileId: string): Promise<void> {
@@ -373,6 +396,7 @@ export function parseTelegramMessageLink(messageLink: string | undefined): Teleg
 
 function getTelegramFilePathCandidates(filePath: string): string[] {
   const relativePath = toRelativeAppPath(filePath);
+  const portableBaseName = getPortableBaseName(filePath);
   const candidates = [
     filePath,
     relativePath,
@@ -380,14 +404,29 @@ function getTelegramFilePathCandidates(filePath: string): string[] {
     `../${relativePath}`,
     `../bot/${relativePath}`,
     `/app/${relativePath}`,
-    `/app/bot/${relativePath}`
+    `/app/bot/${relativePath}`,
+    portableBaseName,
+    `guides/${portableBaseName}`,
+    `bot/guides/${portableBaseName}`,
+    `../guides/${portableBaseName}`,
+    `../bot/guides/${portableBaseName}`,
+    `data/uploads/${portableBaseName}`,
+    `data/guide-bot-uploads/${portableBaseName}`,
+    `/app/guides/${portableBaseName}`,
+    `/app/bot/guides/${portableBaseName}`,
+    `/app/data/uploads/${portableBaseName}`,
+    `/app/data/guide-bot-uploads/${portableBaseName}`
   ];
 
   return [
     ...new Set(
-      candidates.map((candidate) => resolve(candidate))
+      candidates.filter((candidate) => candidate.trim()).map((candidate) => resolve(candidate))
     )
   ];
+}
+
+function getPortableBaseName(filePath: string): string {
+  return basename(filePath) === filePath ? win32.basename(filePath) : basename(filePath);
 }
 
 function toRelativeAppPath(filePath: string): string {
