@@ -208,7 +208,7 @@ export class BusinessBotService {
     await this.recordAnalytics("guide_delivered", message, { guideTitle: guide.title }, guide.id);
     return {
       chatId: message.chatId,
-      text: `${this.getGuideCopy("deliveredPrefix", "Here is your guide:")} ${guide.title}`,
+      text: this.createGuideDeliveredText(guide),
       status: "handled",
       photoPath: guide.photoPath ?? this.getGuideMedia("deliveredPhotoPath"),
       documentPath: guide.filePath,
@@ -282,6 +282,23 @@ export class BusinessBotService {
 
   private getGuideButtonText(guide: GuideOffer): string {
     return `${guide.buttonPrefix ? `${guide.buttonPrefix} ` : ""}${guide.title}`;
+  }
+
+  private createGuideDeliveredText(guide: GuideOffer): string {
+    const prefix = this.getGuideCopy("deliveredPrefix", "Here is your guide:").trim();
+    if (!prefix) {
+      return guide.title;
+    }
+
+    if (prefix.includes("{title}")) {
+      return prefix.replaceAll("{title}", guide.title);
+    }
+
+    if (prefix.toLowerCase().includes(guide.title.toLowerCase())) {
+      return prefix;
+    }
+
+    return `${prefix} ${guide.title}`;
   }
 
   private getGuideMedia(key: keyof GuideBotMedia): string | undefined {

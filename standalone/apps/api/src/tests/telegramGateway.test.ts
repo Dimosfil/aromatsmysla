@@ -886,6 +886,169 @@ async function testGuideBotWorkflow() {
   }
 }
 
+async function testGuideDeliveredTextDoesNotDuplicateTitle() {
+  const telegramFetch: typeof fetch = async (url) => {
+    assert.ok(String(url).endsWith("/getChatMember"));
+    return new Response(JSON.stringify({ ok: true, result: { status: "member" } }), {
+      status: 200,
+      headers: {
+        "content-type": "application/json"
+      }
+    });
+  };
+  const title = "Guide 7 essential oils";
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        TELEGRAM_BOT_TOKEN: validToken,
+        GUIDE_BOT_REQUIRED_CHANNEL_ID: "@demo_channel",
+        GUIDE_BOT_COPY_DELIVERED_PREFIX: `Your gift - ${title}`,
+        GUIDE_BOT_GUIDE_1_ID: "guide-7",
+        GUIDE_BOT_GUIDE_1_TITLE: title,
+        GUIDE_BOT_GUIDE_1_FILE_PATH: "guides/guide-7.pdf"
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: `data/test-guide-bot-title-dedupe-${process.pid}-${Date.now()}.sqlite3`,
+    telegramFetch
+  });
+
+  try {
+    const chosen = await server.inject({
+      method: "POST",
+      url: "/telegram/inbound",
+      payload: {
+        chatId: "guide-chat",
+        userId: "guide-user",
+        username: "reader",
+        text: "guide:guide-7",
+        callbackData: "guide:guide-7"
+      }
+    });
+    assert.equal(chosen.statusCode, 200);
+    assert.equal(chosen.json<{ text: string }>().text, `Your gift - ${title}`);
+  } finally {
+    await server.close();
+  }
+}
+
+async function testExistingDocumentPathWinsOverTelegramFallbacks() {
+  const rootDir = join(tmpdir(), `guide-document-priority-${process.pid}-${Date.now()}`);
+  const guidesDir = join(rootDir, "guides");
+  const originalCwd = process.cwd();
+  mkdirSync(guidesDir, { recursive: true });
+  writeFileSync(join(guidesDir, "correct-guide.pdf"), "Correct PDF", "utf8");
+
+  let updatesSent = false;
+  const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
+  const telegramFetch: typeof fetch = async (url, init) => {
+    fetchCalls.push({
+      url: String(url),
+      init
+    });
+
+    const endpoint = String(url).split("/").pop();
+    if (endpoint === "getUpdates") {
+      if (updatesSent) {
+        return new Response(JSON.stringify({ ok: true, result: [] }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        });
+      }
+
+      updatesSent = true;
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            {
+              update_id: 1,
+              callback_query: {
+                id: "callback-1",
+                data: "guide:guide-7",
+                from: {
+                  id: 42,
+                  username: "reader"
+                },
+                message: {
+                  chat: {
+                    id: "guide-chat"
+                  }
+                }
+              }
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    }
+
+    if (endpoint === "getChatMember") {
+      return new Response(JSON.stringify({ ok: true, result: { status: "member" } }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+    }
+
+    if (endpoint === "answerCallbackQuery" || endpoint === "sendMessage" || endpoint === "sendDocument") {
+      return new Response(JSON.stringify({ ok: true, result: {} }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+    }
+
+    if (endpoint === "copyMessage") {
+      throw new Error("copyMessage should not be called when the uploaded document exists.");
+    }
+
+    throw new Error(`Unexpected Telegram endpoint: ${endpoint}`);
+  };
+
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        TELEGRAM_BOT_TOKEN: validToken,
+        TELEGRAM_POLLING_ENABLED: "true",
+        GUIDE_BOT_REQUIRED_CHANNEL_ID: "@demo_channel",
+        GUIDE_BOT_GUIDE_1_ID: "guide-7",
+        GUIDE_BOT_GUIDE_1_TITLE: "Guide 7 essential oils",
+        GUIDE_BOT_GUIDE_1_FILE_PATH: "guides/correct-guide.pdf",
+        GUIDE_BOT_GUIDE_1_TELEGRAM_MESSAGE_LINK: "https://t.me/aromatsmysla/123",
+        GUIDE_BOT_GUIDE_1_TELEGRAM_FILE_ID: "old-test-file-id"
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: join(rootDir, "sessions.sqlite3"),
+    telegramFetch,
+    telegramPollIntervalMs: 25,
+    telegramRetryDelayMs: 1
+  });
+
+  try {
+    process.chdir(rootDir);
+    await waitFor(() => fetchCalls.some((call) => call.url.endsWith("/sendDocument")));
+    assert.ok(fetchCalls.some((call) => call.url.endsWith("/sendDocument")), "Expected the existing PDF to be sent.");
+    assert.equal(fetchCalls.some((call) => call.url.endsWith("/copyMessage")), false);
+    const sendDocument = fetchCalls.find((call) => call.url.endsWith("/sendDocument"));
+    assert.ok(sendDocument?.init?.body instanceof FormData, "Expected file upload FormData, not Telegram file_id JSON.");
+  } finally {
+    process.chdir(originalCwd);
+    await server.close();
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+}
+
 async function testGuideBotTelegramMessageLinkWorkflow() {
   const telegramFetch: typeof fetch = async (url) => {
     assert.ok(String(url).endsWith("/getChatMember"));
@@ -1122,6 +1285,8 @@ await testSessionDebugRoute();
 await testLeadCaptureWorkflow();
 await testTelegramDiagnosticsRoute();
 await testGuideBotWorkflow();
+await testGuideDeliveredTextDoesNotDuplicateTitle();
+await testExistingDocumentPathWinsOverTelegramFallbacks();
 await testGuideBotTelegramMessageLinkWorkflow();
 await testTelegramMessageLinkFallsBackToFileId();
 await testGuideBotSubscriptionCheckFailure();

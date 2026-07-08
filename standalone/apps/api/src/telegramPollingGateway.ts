@@ -229,6 +229,15 @@ export class TelegramPollingGateway {
   private async sendDocument(response: BotBusinessResponse): Promise<void> {
     const errors: string[] = [];
 
+    if (response.documentPath) {
+      try {
+        await this.sendDocumentPath(response.chatId, response.documentPath);
+        return;
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+
     if (response.documentTelegramMessageLink) {
       try {
         await this.copyDocumentMessage(response.chatId, response.documentTelegramMessageLink);
@@ -241,15 +250,6 @@ export class TelegramPollingGateway {
     if (response.documentTelegramFileId) {
       try {
         await this.sendDocumentFileId(response.chatId, response.documentTelegramFileId);
-        return;
-      } catch (error) {
-        errors.push(error instanceof Error ? error.message : String(error));
-      }
-    }
-
-    if (response.documentPath) {
-      try {
-        await this.sendDocumentPath(response.chatId, response.documentPath);
         return;
       } catch (error) {
         errors.push(error instanceof Error ? error.message : String(error));
