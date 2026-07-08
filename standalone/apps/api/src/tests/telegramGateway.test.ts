@@ -330,6 +330,95 @@ async function testAdminGuideUploadAcceptsLargePdf() {
   }
 }
 
+async function testAdminContentPersistsDistinctGuidePhotoPaths() {
+  const rootDir = join(tmpdir(), `guide-photo-save-${process.pid}-${Date.now()}`);
+  mkdirSync(rootDir, { recursive: true });
+  const server = buildServer({
+    config: loadApiConfig({
+      env: {
+        ADMIN_USERNAME: "admin",
+        ADMIN_PASSWORD: "secret",
+        GUIDE_BOT_REQUIRED_CHANNEL_ID: "@demo_channel",
+        GUIDE_BOT_CONTENT_PATH: join(rootDir, "content.json"),
+        GUIDE_BOT_UPLOAD_DIR: join(rootDir, "uploads")
+      },
+      loadEnvFile: false
+    }),
+    sqliteSessionPath: join(rootDir, "sessions.sqlite3")
+  });
+
+  try {
+    const login = await server.inject({
+      method: "POST",
+      url: "/admin/login",
+      payload: {
+        username: "admin",
+        password: "secret"
+      }
+    });
+    assert.equal(login.statusCode, 200);
+    const token = login.json<{ token: string }>().token;
+
+    const content = {
+      requiredChannelUrl: "https://t.me/demo_channel",
+      selectionPhotoPath: "/app/data/uploads/selection.jpg",
+      messages: {
+        welcomePrompt: "Welcome",
+        subscribePrompt: "Subscribe",
+        subscribedPrompt: "Choose",
+        deliveredPrefix: "Here",
+        unavailableGuide: "Unavailable",
+        subscriptionCheckError: "Error",
+        checkSubscriptionButton: "Check",
+        channelButtonText: "Channel"
+      },
+      media: {
+        deliveredPhotoPath: "/app/data/uploads/global-delivered.jpg"
+      },
+      guides: [
+        {
+          id: "first",
+          title: "First guide",
+          filePath: "/app/data/uploads/first.pdf",
+          photoPath: "/app/data/uploads/first.jpg"
+        },
+        {
+          id: "second",
+          title: "Second guide",
+          filePath: "/app/data/uploads/second.pdf",
+          photoPath: "/app/data/uploads/second.png"
+        }
+      ]
+    };
+
+    const saved = await server.inject({
+      method: "PUT",
+      url: "/admin/guide-bot/content",
+      headers: {
+        authorization: `Bearer ${token}`
+      },
+      payload: content
+    });
+    assert.equal(saved.statusCode, 200);
+    assert.equal(saved.json<{ guides: Array<{ photoPath?: string }> }>().guides[0]?.photoPath, "/app/data/uploads/first.jpg");
+    assert.equal(saved.json<{ guides: Array<{ photoPath?: string }> }>().guides[1]?.photoPath, "/app/data/uploads/second.png");
+
+    const loaded = await server.inject({
+      method: "GET",
+      url: "/admin/guide-bot/content",
+      headers: {
+        authorization: `Bearer ${token}`
+      }
+    });
+    assert.equal(loaded.statusCode, 200);
+    assert.equal(loaded.json<{ guides: Array<{ photoPath?: string }> }>().guides[0]?.photoPath, "/app/data/uploads/first.jpg");
+    assert.equal(loaded.json<{ guides: Array<{ photoPath?: string }> }>().guides[1]?.photoPath, "/app/data/uploads/second.png");
+  } finally {
+    await server.close();
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+}
+
 async function testAdminAuthUsersAndRoles() {
   const rootDir = join(tmpdir(), `admin-auth-${process.pid}-${Date.now()}`);
   mkdirSync(rootDir, { recursive: true });
@@ -719,7 +808,8 @@ async function testGuideBotWorkflow() {
         GUIDE_BOT_GUIDE_1_ID: "tg",
         GUIDE_BOT_GUIDE_1_TITLE: "Telegram launch guide",
         GUIDE_BOT_GUIDE_1_BUTTON_PREFIX: "*",
-        GUIDE_BOT_GUIDE_1_FILE_PATH: "guides/telegram-launch.pdf"
+        GUIDE_BOT_GUIDE_1_FILE_PATH: "guides/telegram-launch.pdf",
+        GUIDE_BOT_GUIDE_1_PHOTO_PATH: "guides/telegram-launch.jpg"
       },
       loadEnvFile: false
     }),
@@ -779,9 +869,10 @@ async function testGuideBotWorkflow() {
       }
     });
     assert.equal(chosen.statusCode, 200);
-    const chosenBody = chosen.json<{ text: string; documentPath?: string }>();
+    const chosenBody = chosen.json<{ text: string; documentPath?: string; photoPath?: string }>();
     assert.match(chosenBody.text, /Your aroma guide: Telegram launch guide/);
     assert.equal(chosenBody.documentPath, "guides/telegram-launch.pdf");
+    assert.equal(chosenBody.photoPath, "guides/telegram-launch.jpg");
 
     const session = await server.inject({
       method: "GET",
@@ -1022,6 +1113,7 @@ await testGuideBotContentSeedFallback();
 await testTelegramFilePathFallback();
 await testTelegramMessageLinkParsing();
 await testAdminGuideUploadAcceptsLargePdf();
+await testAdminContentPersistsDistinctGuidePhotoPaths();
 await testAdminAuthUsersAndRoles();
 await testInboundWorkflowWithoutTelegramApi();
 await testMockAiWorkflow();

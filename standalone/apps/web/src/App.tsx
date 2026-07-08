@@ -1054,6 +1054,13 @@ function GuideEditor({
         onPathChange={(filePath) => onChange({ ...guide, filePath })}
         onUpload={onUpload}
       />
+      <PathUpload
+        label="Фото этого материала"
+        value={guide.photoPath ?? ""}
+        accept="image/jpeg,image/png,image/webp"
+        onPathChange={(photoPath) => onChange({ ...guide, photoPath })}
+        onUpload={onUpload}
+      />
       <label>
         Ссылка на пост Telegram
         <input
@@ -1102,6 +1109,7 @@ function createEmptyGuide(): GuideBotAdminGuide {
     id: "",
     title: "",
     filePath: "",
+    photoPath: "",
     telegramFileId: "",
     telegramMessageLink: "",
     buttonPrefix: ""
@@ -1124,6 +1132,9 @@ function findLocalWorkstationFilePathWarnings(content: GuideBotAdminContent): st
     const hasTelegramFallback = Boolean(guide.telegramFileId?.trim() || guide.telegramMessageLink?.trim());
     if (isLocalWorkstationPath(guide.filePath) && !hasTelegramFallback) {
       warnings.push(guide.title.trim() || `материал ${index + 1}`);
+    }
+    if (isLocalWorkstationPath(guide.photoPath)) {
+      warnings.push(`${guide.title.trim() || `материал ${index + 1}`}: фото`);
     }
   });
 

@@ -13,6 +13,7 @@ export interface GuideOffer {
   id: string;
   title: string;
   filePath: string;
+  photoPath?: string;
   telegramFileId?: string;
   telegramMessageLink?: string;
   buttonPrefix?: string;
