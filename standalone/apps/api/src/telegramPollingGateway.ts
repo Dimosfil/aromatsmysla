@@ -213,7 +213,7 @@ export class TelegramPollingGateway {
     await this.callTelegramForm("sendPhoto", formData);
   }
 
-  private async sendDocumentPath(chatId: string, documentPath: string): Promise<void> {
+  private async sendDocumentPath(chatId: string, documentPath: string, documentFileName?: string): Promise<void> {
     const resolvedDocumentPath = resolveTelegramFilePath(documentPath);
     if (!resolvedDocumentPath) {
       throw new Error(`Telegram document file not found: ${documentPath}`);
@@ -221,7 +221,7 @@ export class TelegramPollingGateway {
 
     const formData = new FormData();
     formData.append("chat_id", chatId);
-    formData.append("document", new Blob([readFileSync(resolvedDocumentPath)]), basename(resolvedDocumentPath));
+    formData.append("document", new Blob([readFileSync(resolvedDocumentPath)]), documentFileName?.trim() || basename(resolvedDocumentPath));
 
     await this.callTelegramForm("sendDocument", formData);
   }
@@ -231,7 +231,7 @@ export class TelegramPollingGateway {
 
     if (response.documentPath) {
       try {
-        await this.sendDocumentPath(response.chatId, response.documentPath);
+        await this.sendDocumentPath(response.chatId, response.documentPath, response.documentFileName);
         return;
       } catch (error) {
         errors.push(error instanceof Error ? error.message : String(error));

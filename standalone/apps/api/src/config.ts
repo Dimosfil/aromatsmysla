@@ -35,6 +35,7 @@ export interface GuideRuntimeConfig {
   id: string;
   title: string;
   filePath: string;
+  fileName?: string;
   photoPath?: string;
   telegramFileId?: string;
   telegramMessageLink?: string;
@@ -145,6 +146,7 @@ function readGuideConfigs(env: NodeJS.ProcessEnv): GuideRuntimeConfig[] {
     const id = readOptionalString(env[`${prefix}_ID`]);
     const title = readOptionalString(env[`${prefix}_TITLE`]);
     const filePath = readOptionalString(env[`${prefix}_FILE_PATH`]);
+    const fileName = readOptionalString(env[`${prefix}_FILE_NAME`]) ?? undefined;
     const photoPath = readOptionalString(env[`${prefix}_PHOTO_PATH`]) ?? undefined;
     const telegramFileId = readOptionalString(env[`${prefix}_TELEGRAM_FILE_ID`]) ?? undefined;
     const telegramMessageLink = readOptionalString(env[`${prefix}_TELEGRAM_MESSAGE_LINK`]) ?? undefined;
@@ -157,6 +159,7 @@ function readGuideConfigs(env: NodeJS.ProcessEnv): GuideRuntimeConfig[] {
       id: id ?? "",
       title: title ?? "",
       filePath: filePath ?? "",
+      fileName,
       photoPath,
       telegramFileId,
       telegramMessageLink,

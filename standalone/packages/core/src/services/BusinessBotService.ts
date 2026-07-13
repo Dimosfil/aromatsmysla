@@ -212,6 +212,7 @@ export class BusinessBotService {
       status: "handled",
       photoPath: guide.photoPath ?? this.getGuideMedia("deliveredPhotoPath"),
       documentPath: guide.filePath,
+      documentFileName: guide.fileName,
       documentTelegramFileId: guide.telegramFileId,
       documentTelegramMessageLink: guide.telegramMessageLink
     };

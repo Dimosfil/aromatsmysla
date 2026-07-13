@@ -7,9 +7,8 @@ behavior as the full instruction kit.
 
 ## Project
 
-This repository contains the `aromatsmysla` Telegram guide bot profile and its
-standalone deployment package. The primary surfaces are the Telegram bot runtime,
-admin-managed guide/content data, and the Docker/BotHost deployment assets.
+Describe what this project is, who it serves, and the primary runtime or product
+surface.
 
 ## Project Goal
 
@@ -41,16 +40,17 @@ implemented against each goal criterion and list remaining gaps as blockers.
   blocker. The compact result must explicitly include the pending migration
   count, including `0` when no migrations are pending. Do not read `updates/`
   for this startup check.
-- If the request contains a GI chat command such as `gi ...`, `ги ...`, or a
-  known mojibake form such as `РіРё ...`, treat it as a concrete task even when
+- If the request contains a GI chat command such as `gi ...`, `РіРё ...`, or a
+  known mojibake form such as `Р С–Р С‘ ...`, treat it as a concrete task even when
   the message is short. First read `COMMANDS.md` when present, then read every
   runtime module routed to that command before acting.
-- For state-changing GI commands that start, stop, restart, build, rebuild, deploy,
-  test, install, reset, update, commit, push, or manage task-manager state, do
+- For state-changing GI commands that start, stop, restart, build, rebuild,
+  deploy, test, install, reset, update, commit, push, or manage task-manager
+  state, do
   not execute from memory, old chat examples, or a command name alone. If the
   command's routed module is unavailable, stop and report the missing path.
-- For `gi restart`, `gi reboot`, `gi docker`, `ги рестарт`, `ги ребут`,
-  `ги докер`, and equivalent aliases,
+- For `gi restart`, `gi reboot`, `gi docker`, `РіРё СЂРµСЃС‚Р°СЂС‚`, `РіРё СЂРµР±СѓС‚`,
+  `РіРё РґРѕРєРµСЂ`, and equivalent aliases,
   `patterns/AGENTS_RUNTIME/09-project-operation-commands.md` is mandatory
   context before any process inspection, Docker build, stop, start, or success
   report.
@@ -61,25 +61,6 @@ implemented against each goal criterion and list remaining gaps as blockers.
 - If a task crosses topics, read every matching module before acting.
 - Prefer project-local instructions, runbooks, contracts, project memory, and
   service guides over shared defaults when they are more specific.
-- Before filesystem writes, verify the active project root and target identity
-  from local instructions, README, manifests, git remote, service id, or project
-  memory. If the task appears to target a different product, repository, or
-  absolute path outside the current root, stop and warn the user unless the
-  current message explicitly authorizes that exact external path and action.
-- Keep `tools/` for durable development and agent tooling only. Before writing
-  under `tools/`, classify the file. Allow scripts, adapters, bootstrap
-  commands, deploy/test helpers, agent-memory tooling, and small redacted
-  manifests. Do not put product runtime/source packages, product plugin
-  implementations, product tests, full product documentation, generated product
-  outputs, selected-run artifacts, screenshots, raw exports, build bundles,
-  downloaded datasets, or one-off work results there. `tools/project-memory/`
-  may hold compact implementation-driving specifications and evidence
-  references, but it is not a replacement for source, test, docs, artifact,
-  output, data, build, release, or product package directories.
-- Do not classify a Python, PowerShell, shell, or other executable as durable
-  tooling by extension alone. Keep one-off research probes, exploratory scripts,
-  ad hoc collectors, and throwaway diagnostics outside `tools/`; prefer an
-  inline command or an ignored scratch/temp location outside `tools/`.
 
 ## Restore Context
 
@@ -96,7 +77,9 @@ Start here when a concrete restore/start task exists:
 If the startup script is unavailable, read only the smallest useful slices of:
 
 - `AGENTS.md`
-- latest relevant file in `tools/summary/`
+- latest handoff summary in `tools/summary/`; read its substantive sections
+  enough to recover the current topic, key theses or decisions, blockers, and
+  next useful direction, not only its filename or timestamp
 - `tools/AGENT_WORKING_AGREEMENTS.md`
 - `tools/AGENT_RUNBOOK.md`
 - relevant notes in `tools/project-memory/`
@@ -128,8 +111,7 @@ Use the RAG startup flow and retrieve only task-relevant context.
   packaging, SQL/vector inspection, and project/RAG rebuild commands:
   `patterns/AGENTS_RUNTIME/09-project-operation-commands.md`
 - Nested repositories, private local app data, `gi logic` external sources,
-  product-plan intent signals, and
-  missing required entities:
+  product-plan intent signals, and missing required entities:
   `patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md`
 - Project, commit, task, and response language preferences:
   `patterns/AGENTS_RUNTIME/11-language-preferences.md`
@@ -144,7 +126,7 @@ Use the RAG startup flow and retrieve only task-relevant context.
 - Startup product engineering, business-first delivery, .NET/frontend
   expectations, and professional communication:
   `patterns/AGENTS_RUNTIME/18-startup-product-engineering.md`
-- Game modding projects, `gi mod`, and selected game-install path handling:
+- Game modding projects, `gi mod`, and selected game install path handling:
   `patterns/AGENTS_RUNTIME/19-game-modding.md`
 
 ## Durable Memory
@@ -159,6 +141,31 @@ crawled/downloaded files, large logs, model outputs, build artifacts, export
 bundles, or run datasets in `tools/project-memory/`. Use a project-local
 artifact/evidence/output/data/docs-asset location and keep only compact
 manifests, summaries, checksums, or links in project memory when needed.
+
+Use `tools/` for durable development and agent tooling only, such as scripts,
+adapters, bootstrap commands, deployment helpers, verification helpers,
+agent-memory tooling, and redacted examples or manifests. Before writing under
+`tools/`, classify the file as tooling or product material. Do not put product
+runtime/source packages, product plugin implementations, product tests, full
+product documentation, generated product output, selected-run artifacts,
+uploaded site contents, screenshots, raw exports, build bundles, downloaded
+datasets, or one-off work results there. Product code belongs in source/package
+locations, tests in the test tree, product docs in `README.md`, `docs/`, or
+runbooks, and artifacts in documented output, evidence, data, build, release,
+or docs-asset locations. `tools/project-memory/` may contain compact
+implementation-driving specifications and evidence references, but it is not a
+replacement for source, tests, docs, or artifact folders.
+
+Do not classify a script as durable tooling merely because it is Python,
+PowerShell, shell, or another executable. Single-task research probes,
+exploratory scripts, ad hoc collectors, scrapers, and throwaway diagnostics do
+not belong in `tools/`, including new `tools/research`, `tools/probes`, or
+`tools/scratch` subtrees. Prefer an inline command. If a file is required, use
+the documented ignored scratch/temp location outside `tools/`, remove it after
+use, and retain only necessary results in the documented evidence or artifact
+location. Promote a script into `tools/` only when it has a reusable
+project-owned purpose, stable invocation contract, documentation, and an
+expected future caller.
 
 General project documentation lives in `README.md`, `docs/`, and the runbook.
 Keep overview, visible functionality, stack, commands, operations, and
@@ -200,7 +207,8 @@ Inspect logs:
 
 - Source: `TODO`
 - Tests: `TODO`
-- Tools: `tools/`
+- Tools: `tools/` for durable development and agent tooling only
+- Outputs/evidence/build artifacts: `TODO`
 - Summaries: `tools/summary/`
 - Project memory: `tools/project-memory/`
 
@@ -214,4 +222,15 @@ Inspect logs:
   unrelated scope expansion.
 - Treat this project root as the filesystem boundary for normal work unless the
   user gives an explicit concrete path and action.
+- Before filesystem writes, verify the active project root and target identity
+  from local instructions, README, manifests, git remote, service id, or project
+  memory. If the task appears to target a different product, repository, or
+  absolute path outside this root, stop and warn the user unless the current
+  message explicitly authorizes that exact external path and action.
 - Preserve text encodings when editing files.
+- On Windows, never send Russian or other non-ASCII API/admin write bodies as a
+  plain PowerShell `-Body` string. Prefer Node `fetch`, or send explicit UTF-8
+  bytes with `charset=utf-8`, then read the saved value back and check for
+  literal `????`, replacement characters, and mojibake fragments.
+
+

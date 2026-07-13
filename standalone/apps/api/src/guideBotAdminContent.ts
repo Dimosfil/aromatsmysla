@@ -158,6 +158,7 @@ function normalizeGuide(guide: GuideBotAdminGuide): GuideBotAdminGuide {
     title: guide.title.trim(),
     buttonPrefix: normalizeOptionalString(guide.buttonPrefix),
     filePath: guide.filePath.trim(),
+    fileName: normalizeOptionalString(guide.fileName),
     photoPath: normalizeOptionalString(guide.photoPath),
     telegramFileId: normalizeOptionalString(guide.telegramFileId),
     telegramMessageLink: normalizeOptionalString(guide.telegramMessageLink)

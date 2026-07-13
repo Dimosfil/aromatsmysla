@@ -10,6 +10,24 @@ patterns, templates, and accepted migrations.
 
 ## Entries
 
+### 2026-07-08: Admin Web Client And Content Model Extraction
+
+Previous architecture: the admin panel's main `App.tsx` component owned React
+state, API request helpers, session-token storage, content-editor defaults, and
+local workstation path validation in one large module.
+
+New architecture: API calls and unauthorized-session detection live in
+`standalone/apps/web/src/apiClient.ts`. Content-editor constants, empty guide
+creation, and local workstation path warnings live in
+`standalone/apps/web/src/contentEditorModel.ts`. `App.tsx` remains the UI
+composition surface and consumes these focused modules. All admin API `401`
+responses are treated as an expired session: the stored token is removed and the
+admin panel returns to the login screen.
+
+Reason: continue the GI refactor in small verified batches while preserving the
+admin panel behavior and keeping bot delivery bugfixes isolated from frontend
+cleanup.
+
 ### 2026-06-21: Modular Agents Runtime Entrypoint
 
 Previous architecture: root `AGENTS.md` and the copied project template carried

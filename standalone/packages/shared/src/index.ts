@@ -30,6 +30,7 @@ export interface BotBusinessResponse {
   inlineKeyboard?: BotInlineButton[][];
   replyKeyboard?: BotReplyKeyboardButton[][];
   documentPath?: string;
+  documentFileName?: string;
   documentTelegramFileId?: string;
   documentTelegramMessageLink?: string;
   photoPath?: string;
@@ -141,6 +142,7 @@ export interface GuideBotAdminGuide {
   id: string;
   title: string;
   filePath: string;
+  fileName?: string;
   photoPath?: string;
   telegramFileId?: string;
   telegramMessageLink?: string;

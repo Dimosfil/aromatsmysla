@@ -2,6 +2,8 @@
 
 For AI agents: read AGENTS.md first.
 
+Instruction-kit bootstrap and update guidance: [BOOTSTRAP.md](BOOTSTRAP.md).
+
 This repository is a deployable Telegram guide bot profile for `aromatsmysla`.
 It combines a Fastify API, Telegram polling gateway, SQLite-backed admin/session
 storage, and a React admin panel packaged under `standalone/`.

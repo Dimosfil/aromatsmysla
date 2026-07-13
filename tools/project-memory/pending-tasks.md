@@ -14,6 +14,35 @@ generated outputs, secrets, credentials, or private production data.
 
 ## Tasks
 
+### Telegram Guide Download Filename
+
+Goal: let an admin set the filename displayed for each guide document in Telegram,
+then publish the verified current workspace to the configured GitHub deployment branch.
+
+- [x] Add the optional guide filename through admin content, business response, and Telegram multipart delivery.
+- [x] Add the admin field and a delivery test with a Cyrillic filename.
+- [x] Verify, commit all current workspace changes, and push `main`.
+
+### Cyrillic PDF Upload Headers
+
+Goal: allow an admin to upload a PDF whose filename contains Cyrillic characters.
+
+- [x] Encode the browser-sent filename header and decode it at the API boundary.
+- [x] Cover the encoded filename path with the focused API test.
+- [x] Run type checks and the focused API test.
+
+### Instruction Kit Update 2026.07.10.1
+
+Goal: apply the five accepted instruction-kit migrations through 2026.07.10.1
+without changing the Telegram bot runtime or overwriting existing user work.
+
+Planned changes:
+
+- [x] Merge the required shared instruction files and new bootstrap/game-modding
+  modules into this project.
+- [x] Verify migration requirements and record the applied IDs in metadata.
+- [x] Run the instruction-kit bootstrap check and whitespace validation.
+
 ### Telegram Reply Keyboard Buttons
 
 Goal: add support for Telegram reply-keyboard buttons shown under the message

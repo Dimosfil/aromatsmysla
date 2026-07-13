@@ -175,10 +175,12 @@ export function buildServer(options: BuildServerOptions = {}) {
         return reply;
       }
 
-      const fileName = request.headers["x-file-name"];
-      if (!fileName) {
+      const encodedFileName = request.headers["x-file-name"];
+      if (!encodedFileName) {
         return reply.code(400).send({ error: "X-File-Name header is required." });
       }
+
+      const fileName = decodeUploadFileName(encodedFileName);
 
       try {
         const filePath = adminContentStore.writeUpload(fileName, request.body);
@@ -263,6 +265,14 @@ export function buildServer(options: BuildServerOptions = {}) {
   });
 
   return server;
+}
+
+function decodeUploadFileName(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function registerAdminWebRoutes(server: FastifyInstance, adminWebDir: string | null): void {

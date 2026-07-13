@@ -3,166 +3,33 @@ import { useQuery } from "@tanstack/react-query";
 import type {
   AdminChangePasswordRequest,
   AdminCreateUserRequest,
-  AdminLoginResponse,
-  AdminMeResponse,
   AdminResetPasswordRequest,
   AdminStatsResponse,
   AdminUpdateUserRequest,
-  AdminUploadResponse,
   AdminUserDto,
   AdminUserRole,
-  AdminUsersResponse,
   GuideBotAdminContent,
-  GuideBotAdminGuide,
-  GuideBotAdminMedia,
-  GuideBotAdminMessages
+  GuideBotAdminGuide
 } from "@telegram-bot-template/shared";
+import {
+  changePassword,
+  createUser,
+  fetchContent,
+  fetchMe,
+  fetchStats,
+  fetchUsers,
+  isUnauthorizedError,
+  login,
+  resetUserPassword,
+  saveContent,
+  tokenStorageKey,
+  updateUser,
+  uploadFile
+} from "./apiClient";
+import { createEmptyGuide, emptyContent, findLocalWorkstationFilePathWarnings, messageFields } from "./contentEditorModel";
 
-const apiBaseUrl = import.meta.env.VITE_API_URL ?? "";
-const tokenStorageKey = "guide-bot-admin-token";
-
-type MessageKey = keyof GuideBotAdminMessages;
-type MediaKey = keyof GuideBotAdminMedia;
 type SaveState = "idle" | "saving" | "saved" | "error";
 type ActiveTab = "content" | "stats" | "users";
-
-const messageFields: Array<{ key: MessageKey; label: string; mediaKey?: MediaKey }> = [
-  { key: "welcomePrompt", label: "Первое сообщение /start", mediaKey: "welcomePhotoPath" },
-  { key: "subscribePrompt", label: "Нет подписки", mediaKey: "subscribePhotoPath" },
-  { key: "subscribedPrompt", label: "Экран выбора подарка" },
-  { key: "deliveredPrefix", label: "Подпись перед файлом", mediaKey: "deliveredPhotoPath" },
-  { key: "unavailableGuide", label: "Недоступный материал", mediaKey: "unavailableGuidePhotoPath" },
-  { key: "subscriptionCheckError", label: "Ошибка проверки подписки", mediaKey: "subscriptionCheckErrorPhotoPath" },
-  { key: "checkSubscriptionButton", label: "Кнопка проверки подписки" },
-  { key: "channelButtonText", label: "Кнопка канала" }
-];
-
-const emptyContent: GuideBotAdminContent = {
-  requiredChannelUrl: "",
-  selectionPhotoPath: "",
-  messages: {
-    welcomePrompt: "",
-    subscribePrompt: "",
-    subscribedPrompt: "",
-    deliveredPrefix: "",
-    unavailableGuide: "",
-    subscriptionCheckError: "",
-    checkSubscriptionButton: "",
-    channelButtonText: ""
-  },
-  media: {},
-  guides: []
-};
-
-async function login(username: string, password: string): Promise<AdminLoginResponse> {
-  const response = await fetch(`${apiBaseUrl}/admin/login`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ username, password })
-  });
-  return readApiResponse<AdminLoginResponse>(response);
-}
-
-async function fetchMe(token: string): Promise<AdminMeResponse> {
-  const response = await fetch(`${apiBaseUrl}/admin/me`, {
-    headers: createAuthHeaders(token)
-  });
-  return readApiResponse<AdminMeResponse>(response);
-}
-
-async function fetchContent(token: string): Promise<GuideBotAdminContent> {
-  const response = await fetch(`${apiBaseUrl}/admin/guide-bot/content`, {
-    headers: createAuthHeaders(token)
-  });
-  return readApiResponse<GuideBotAdminContent>(response);
-}
-
-async function saveContent(token: string, content: GuideBotAdminContent): Promise<GuideBotAdminContent> {
-  const response = await fetch(`${apiBaseUrl}/admin/guide-bot/content`, {
-    method: "PUT",
-    headers: {
-      ...createAuthHeaders(token),
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(content)
-  });
-  return readApiResponse<GuideBotAdminContent>(response);
-}
-
-async function fetchStats(token: string): Promise<AdminStatsResponse> {
-  const response = await fetch(`${apiBaseUrl}/admin/stats`, {
-    headers: createAuthHeaders(token)
-  });
-  return readApiResponse<AdminStatsResponse>(response);
-}
-
-async function fetchUsers(token: string): Promise<AdminUsersResponse> {
-  const response = await fetch(`${apiBaseUrl}/admin/users`, {
-    headers: createAuthHeaders(token)
-  });
-  return readApiResponse<AdminUsersResponse>(response);
-}
-
-async function createUser(token: string, user: AdminCreateUserRequest): Promise<AdminUserDto> {
-  const response = await fetch(`${apiBaseUrl}/admin/users`, {
-    method: "POST",
-    headers: {
-      ...createAuthHeaders(token),
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(user)
-  });
-  return readApiResponse<AdminUserDto>(response);
-}
-
-async function updateUser(token: string, userId: string, patch: AdminUpdateUserRequest): Promise<AdminUserDto> {
-  const response = await fetch(`${apiBaseUrl}/admin/users/${userId}`, {
-    method: "PATCH",
-    headers: {
-      ...createAuthHeaders(token),
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(patch)
-  });
-  return readApiResponse<AdminUserDto>(response);
-}
-
-async function changePassword(token: string, request: AdminChangePasswordRequest): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/admin/me/password`, {
-    method: "POST",
-    headers: {
-      ...createAuthHeaders(token),
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(request)
-  });
-  await readApiResponse<void>(response);
-}
-
-async function resetUserPassword(token: string, userId: string, request: AdminResetPasswordRequest): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/admin/users/${userId}/password`, {
-    method: "POST",
-    headers: {
-      ...createAuthHeaders(token),
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(request)
-  });
-  await readApiResponse<void>(response);
-}
-
-async function uploadFile(token: string, file: File): Promise<AdminUploadResponse> {
-  const response = await fetch(`${apiBaseUrl}/admin/guide-bot/uploads`, {
-    method: "POST",
-    headers: {
-      ...createAuthHeaders(token),
-      "content-type": "application/octet-stream",
-      "x-file-name": file.name
-    },
-    body: await file.arrayBuffer()
-  });
-  return readApiResponse<AdminUploadResponse>(response);
-}
 
 export function App() {
   const [token, setToken] = useState(() => localStorage.getItem(tokenStorageKey) ?? "");
@@ -206,9 +73,7 @@ export function App() {
 
   useEffect(() => {
     if (isUnauthorizedError(meQuery.error) || isUnauthorizedError(contentQuery.error) || isUnauthorizedError(statsQuery.error) || isUnauthorizedError(usersQuery.error)) {
-      localStorage.removeItem(tokenStorageKey);
-      setToken("");
-      setLoginError("Сессия устарела. Войдите еще раз.");
+      expireSession();
     }
   }, [contentQuery.error, meQuery.error, statsQuery.error, usersQuery.error]);
 
@@ -255,13 +120,11 @@ export function App() {
       setSaveStatus("Сохранено. Бот использует новые значения без перезапуска API.");
       await contentQuery.refetch();
     } catch (error) {
+      if (expireSessionIfUnauthorized(error)) {
+        return;
+      }
       setSaveState("error");
       setSaveStatus(error instanceof Error ? error.message : String(error));
-      if (isUnauthorizedError(error)) {
-        localStorage.removeItem(tokenStorageKey);
-        setToken("");
-        setLoginError("Сессия устарела. Войдите еще раз.");
-      }
     }
   }
 
@@ -276,15 +139,41 @@ export function App() {
       onPath(result.filePath);
       setUploadStatus(`Загружено: ${result.fileName}`);
     } catch (error) {
+      if (expireSessionIfUnauthorized(error)) {
+        return;
+      }
       setUploadStatus(error instanceof Error ? error.message : String(error));
     }
   }
 
   function logout() {
+    endSession();
+  }
+
+  function endSession(message?: string) {
     localStorage.removeItem(tokenStorageKey);
     setToken("");
     setDraft(emptyContent);
     setActiveTab("content");
+    setSaveState("idle");
+    setSaveStatus("");
+    setUploadStatus("");
+    setUsersStatus("");
+    setPasswordStatus("");
+    setLoginError(message ?? "");
+  }
+
+  function expireSession() {
+    endSession("Сессия устарела. Войдите еще раз.");
+  }
+
+  function expireSessionIfUnauthorized(error: unknown): boolean {
+    if (!isUnauthorizedError(error)) {
+      return false;
+    }
+
+    expireSession();
+    return true;
   }
 
   async function handleChangePassword(request: AdminChangePasswordRequest) {
@@ -295,11 +184,11 @@ export function App() {
     setPasswordStatus("Меняю пароль...");
     try {
       await changePassword(token, request);
-      localStorage.removeItem(tokenStorageKey);
-      setToken("");
-      setPasswordStatus("");
-      setLoginError("Пароль изменен. Войдите с новым паролем.");
+      endSession("Пароль изменен. Войдите с новым паролем.");
     } catch (error) {
+      if (expireSessionIfUnauthorized(error)) {
+        return;
+      }
       setPasswordStatus(error instanceof Error ? error.message : String(error));
     }
   }
@@ -315,6 +204,9 @@ export function App() {
       setUsersStatus("Пользователь создан.");
       await usersQuery.refetch();
     } catch (error) {
+      if (expireSessionIfUnauthorized(error)) {
+        return;
+      }
       setUsersStatus(error instanceof Error ? error.message : String(error));
     }
   }
@@ -335,6 +227,9 @@ export function App() {
       await usersQuery.refetch();
       await meQuery.refetch();
     } catch (error) {
+      if (expireSessionIfUnauthorized(error)) {
+        return;
+      }
       setUsersStatus(error instanceof Error ? error.message : String(error));
     }
   }
@@ -351,6 +246,9 @@ export function App() {
       await usersQuery.refetch();
       await meQuery.refetch();
     } catch (error) {
+      if (expireSessionIfUnauthorized(error)) {
+        return;
+      }
       setUsersStatus(error instanceof Error ? error.message : String(error));
     }
   }
@@ -1054,6 +952,14 @@ function GuideEditor({
         onPathChange={(filePath) => onChange({ ...guide, filePath })}
         onUpload={onUpload}
       />
+      <label>
+        Название файла в Telegram
+        <input
+          value={guide.fileName ?? ""}
+          onChange={(event) => onChange({ ...guide, fileName: event.target.value })}
+          placeholder="Например: Гид 7 эфирных масел.pdf"
+        />
+      </label>
       <PathUpload
         label="Фото этого материала"
         value={guide.photoPath ?? ""}
@@ -1104,81 +1010,6 @@ function PathUpload({
   );
 }
 
-function createEmptyGuide(): GuideBotAdminGuide {
-  return {
-    id: "",
-    title: "",
-    filePath: "",
-    photoPath: "",
-    telegramFileId: "",
-    telegramMessageLink: "",
-    buttonPrefix: ""
-  };
-}
-
-function findLocalWorkstationFilePathWarnings(content: GuideBotAdminContent): string[] {
-  const warnings: string[] = [];
-  if (isLocalWorkstationPath(content.selectionPhotoPath)) {
-    warnings.push("фото экрана выбора подарка");
-  }
-
-  for (const [key, value] of Object.entries(content.media)) {
-    if (isLocalWorkstationPath(value)) {
-      warnings.push(`медиа ${key}`);
-    }
-  }
-
-  content.guides.forEach((guide, index) => {
-    const hasTelegramFallback = Boolean(guide.telegramFileId?.trim() || guide.telegramMessageLink?.trim());
-    if (isLocalWorkstationPath(guide.filePath) && !hasTelegramFallback) {
-      warnings.push(guide.title.trim() || `материал ${index + 1}`);
-    }
-    if (isLocalWorkstationPath(guide.photoPath)) {
-      warnings.push(`${guide.title.trim() || `материал ${index + 1}`}: фото`);
-    }
-  });
-
-  return warnings;
-}
-
-function isLocalWorkstationPath(filePath: string | undefined): boolean {
-  const normalized = filePath?.trim();
-  if (!normalized) {
-    return false;
-  }
-
-  return /^[a-zA-Z]:[\\/]/.test(normalized) || /^\\\\/.test(normalized) || /^\/(?:Users|home)\//.test(normalized);
-}
-
-function createAuthHeaders(token: string): Record<string, string> {
-  return {
-    authorization: `Bearer ${token}`
-  };
-}
-
 function canManageUsers(user: AdminUserDto | undefined): boolean {
   return user?.role === "owner" || user?.role === "admin";
-}
-
-async function readApiResponse<T>(response: Response): Promise<T> {
-  const body = (await response.json().catch(() => null)) as (T & { error?: string }) | null;
-  if (!response.ok) {
-    throw new ApiRequestError(body?.error ?? `API request failed: ${response.status}`, response.status);
-  }
-
-  return body as T;
-}
-
-class ApiRequestError extends Error {
-  constructor(
-    message: string,
-    readonly status: number
-  ) {
-    super(message);
-    this.name = "ApiRequestError";
-  }
-}
-
-function isUnauthorizedError(error: unknown): boolean {
-  return error instanceof ApiRequestError && error.status === 401;
 }

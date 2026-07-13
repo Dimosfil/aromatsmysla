@@ -318,11 +318,12 @@ async function testAdminGuideUploadAcceptsLargePdf() {
       headers: {
         authorization: `Bearer ${token}`,
         "content-type": "application/octet-stream",
-        "x-file-name": "customer-guide.pdf"
+        "x-file-name": encodeURIComponent("Фильченко Дмитрий Александрович.pdf")
       },
       payload: Buffer.alloc(2 * 1024 * 1024, "%PDF")
     });
     assert.equal(upload.statusCode, 200);
+    assert.equal(upload.json<{ fileName: string }>().fileName, "Фильченко Дмитрий Александрович.pdf");
     assert.ok(existsSync(upload.json<{ filePath: string }>().filePath));
   } finally {
     await server.close();
@@ -1024,6 +1025,7 @@ async function testExistingDocumentPathWinsOverTelegramFallbacks() {
         GUIDE_BOT_GUIDE_1_ID: "guide-7",
         GUIDE_BOT_GUIDE_1_TITLE: "Guide 7 essential oils",
         GUIDE_BOT_GUIDE_1_FILE_PATH: "guides/correct-guide.pdf",
+        GUIDE_BOT_GUIDE_1_FILE_NAME: "Гид 7 эфирных масел.pdf",
         GUIDE_BOT_GUIDE_1_TELEGRAM_MESSAGE_LINK: "https://t.me/aromatsmysla/123",
         GUIDE_BOT_GUIDE_1_TELEGRAM_FILE_ID: "old-test-file-id"
       },
@@ -1042,6 +1044,9 @@ async function testExistingDocumentPathWinsOverTelegramFallbacks() {
     assert.equal(fetchCalls.some((call) => call.url.endsWith("/copyMessage")), false);
     const sendDocument = fetchCalls.find((call) => call.url.endsWith("/sendDocument"));
     assert.ok(sendDocument?.init?.body instanceof FormData, "Expected file upload FormData, not Telegram file_id JSON.");
+    const document = sendDocument?.init?.body.get("document");
+    assert.ok(document instanceof Blob, "Expected uploaded document blob.");
+    assert.equal((document as File).name, "Гид 7 эфирных масел.pdf");
   } finally {
     process.chdir(originalCwd);
     await server.close();

@@ -77,6 +77,10 @@ gi logic
 ги логика
 gi logic <source> [focus]
 ги логика <ссылка-или-путь> [фокус]
+gi mod
+ги мод
+gi mod path <game-install-path>
+ги мод путь <путь-игры>
 gi build
 gi собрать
 gi rebuild
@@ -215,6 +219,7 @@ the listed commands.
 | `gi info`, `ги инфо` | Find or build the current project's purpose, visible functionality, and stack overview. |
 | `gi stack`, `ги стек` | Find or build the current project's verified technology stack inventory. |
 | `gi logic`, `ги логика`, `gi logic <source> [focus]` | Find, document, or adapt core project logic; with a source path/URL, study that explicit external project narrowly and map portable logic into the current project. |
+| `gi mod`, `ги мод`, `gi mod path <game-install-path>`, `ги мод путь <путь-игры>` | Prepare a game modding project by verifying and recording the selected local game install path separately from mod and log folders. |
 | `gi build`, `gi собрать`, `ги билд`, `ги собрать`, `gi rebuild`, `ги ребилд` | Build/rebuild the current project/application only, producing a release/upload-ready artifact such as a static `dist/`, package, executable, or other documented build output. |
 | `gi tools rebuild`, `gi rag rebuild`, `ги тулс ребилд`, `ги раг ребилд` | Rebuild the full configured GI/project-memory/RAG system after confirmation. |
 | `gi tools rebuild sql`, `gi rag rebuild sql` | Rebuild only the SQL/FTS structured-memory node. |
@@ -1008,6 +1013,12 @@ changes, remote и ветку. Коммитит только изменения 
 предыдущего terminal push или push-only действием; если scoped изменений для
 commit нет, агент сообщает это вместо push-only fallback. Push без нового
 commit выполняется только по `gi только пуш`. При блокерах — кратко объясняет.
+Все task-scoped записи, включая handoff и generated metadata, завершаются до
+staging. После последнего commit/push и последней записи агент снова
+проверяет `git status --short`, а для push — и совпадение с upstream. Совпадение HEAD
+не доказывает чистое working tree: при новом task-scoped diff нельзя сообщать о
+полном успехе. После final status check tracked task-файлы не меняются без повтора
+разрешённого finish workflow и проверки.
 
 Для `gi пул` агент проверяет состояние рабочей копии, текущую ветку и upstream,
 затем делает `git fetch` и подтягивает текущую ветку. Если появляются
